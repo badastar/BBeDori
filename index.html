@@ -243,9 +243,23 @@
     aria-labelledby="detailTitle"
     hidden
   >
-    <!-- 상세 상단 미니멀 헤더 -->
+    <!-- 상세 상단 미니멀 헤더 (좌측 상단 슬라이드 제어 / 중앙 타이틀 / 우측 닫기) -->
     <header class="detail-header">
-      <div class="detail-header-spacer" aria-hidden="true"></div>
+      <div class="detail-slide-bar" aria-label="자동 슬라이드 제어">
+        <div class="slide-buttons">
+          <button type="button" class="btn-pill btn-pill-accent" id="btnSlideToggle">▶ 슬라이드</button>
+          <button type="button" class="btn-pill" id="btnSlideStop" hidden>■ 종료</button>
+        </div>
+        <label for="slideIntervalSelect" class="sr-only">슬라이드 간격</label>
+        <select id="slideIntervalSelect" class="slide-select" title="슬라이드 간격 선택">
+          <option value="3000">3초</option>
+          <option value="5000" selected>5초</option>
+          <option value="10000">10초</option>
+          <option value="15000">15초</option>
+          <option value="30000">30초</option>
+        </select>
+        <span class="slide-status" id="slideStatus" aria-live="polite"></span>
+      </div>
       <div class="detail-brand">빼 도 리 &nbsp; 온 라 인 &nbsp; 전 시 회</div>
       <button
         type="button"
@@ -290,27 +304,11 @@
           <div id="detailVideoContainer"></div>
         </div>
 
-        <!-- 하단 네비게이션 & 슬라이드 컨트롤 -->
+        <!-- 하단 네비게이션 컨트롤 -->
         <div class="detail-controls">
           <div class="detail-nav-buttons">
             <button type="button" class="btn-pill" id="btnPrevArt" aria-label="이전 작품">← 이전 작품</button>
             <button type="button" class="btn-pill" id="btnNextArt" aria-label="다음 작품">다음 작품 →</button>
-          </div>
-
-          <div class="detail-slide-bar" aria-label="자동 슬라이드 제어">
-            <div class="slide-buttons">
-              <button type="button" class="btn-pill btn-pill-accent" id="btnSlideToggle">▶ 슬라이드</button>
-              <button type="button" class="btn-pill" id="btnSlideStop" hidden>■ 종료</button>
-            </div>
-            <label for="slideIntervalSelect" class="sr-only">슬라이드 간격</label>
-            <select id="slideIntervalSelect" class="slide-select" title="슬라이드 간격 선택">
-              <option value="3000">3초</option>
-              <option value="5000" selected>5초</option>
-              <option value="10000">10초</option>
-              <option value="15000">15초</option>
-              <option value="30000">30초</option>
-            </select>
-            <span class="slide-status" id="slideStatus" aria-live="polite"></span>
           </div>
         </div>
       </div>
