@@ -5,11 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>빼도리 온라인 전시회 — 작은 생명과 자연을 그리는 시선</title>
   <meta name="description" content="직접 창작한 곤충, 동물, 자연 및 다양한 디지털 그림 작품을 감상할 수 있는 빼도리 개인 온라인 미술관입니다.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23171717'/%3E%3Ccircle cx='32' cy='32' r='10' fill='%23f15a24'/%3E%3C/svg%3E">
 
   <!-- Google Fonts: 고운돋움 (Gowun Dodum) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome (푸터 유튜브 아이콘용) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
 
   <!-- Main Stylesheet -->
   <link rel="stylesheet" href="./css/style.css">
@@ -24,6 +28,19 @@
       <span></span><span></span><span></span><span></span>
     </div>
 
+    <!-- 5단계: 자연의 빛과 반딧불이 입자 레이어 (pointer-events: none) -->
+    <div class="ambient-layer" aria-hidden="true">
+      <div class="ambient-glow"></div>
+      <span class="ambient-particle"></span>
+      <span class="ambient-particle"></span>
+      <span class="ambient-particle"></span>
+      <span class="ambient-particle"></span>
+      <span class="ambient-particle"></span>
+      <span class="ambient-particle"></span>
+      <span class="ambient-particle"></span>
+      <span class="ambient-particle"></span>
+    </div>
+
     <!-- 상단 내비게이션 -->
     <header class="site-header">
       <div class="header-inner">
@@ -33,7 +50,7 @@
             <i></i><i></i><i></i>
             <i></i><i></i><i></i>
           </span>
-          <span class="brand-text">빼도리</span>
+          <span class="brand-text">BBEODORI <span class="brand-sub">빼도리</span></span>
         </a>
 
         <nav class="main-nav" aria-label="전시회 주요 메뉴">
@@ -42,28 +59,89 @@
         </nav>
 
         <div class="header-actions">
-          <a href="#gallerySection" class="btn-header-cta" id="btnHeaderVisit">전시 관람하기</a>
+          <a href="#gallerySection" class="btn-header-cta" id="btnHeaderVisit">전시장 입장하기</a>
         </div>
       </div>
     </header>
 
-    <!-- 히어로 영역 -->
+    <!-- 히어로 영역 (3단계: 전시장 몰입형 메인 히어로 & 대표 작품 1점 쇼케이스) -->
     <section class="hero-section" aria-labelledby="heroTitle">
-      <div class="hero-grid">
-        <div class="hero-headline-wrap">
+      <div class="hero-showcase-grid">
+        <div class="hero-intro-area">
+          <p class="hero-eyebrow">BBEODORI — A SMALL WORLD, A BEAUTIFUL LIFE.</p>
           <h1 class="hero-title" id="heroTitle">
-            작은 생명과 자연을<br>그리는 시선
+            작은 생명들이 살아 숨 쉬는<br>디지털 아트 갤러리
           </h1>
-        </div>
-        <div class="hero-sub-wrap">
           <p class="hero-subtitle">
-            곤충과 동물, 자연에서 발견한 아름다운 순간을<br>
-            한 점 한 점 그림으로 기록한 빼도리의 온라인 미술관입니다.
+            곤충과 동물, 자연에서 발견한 아름다운 순간과 오래도록 기억하고 싶은 장면을
+            그림으로 기록한 빼도리의 온라인 전시장입니다.
           </p>
-          <a href="#gallerySection" class="hero-explore-link">
-            <span>작품 둘러보기</span>
-            <span class="explore-plus" aria-hidden="true">+</span>
-          </a>
+        </div>
+
+        <div class="hero-stage-area">
+          <button
+            type="button"
+            class="featured-stage-card"
+            id="heroArtworkCard"
+            aria-label="대표 작품 상세 감상 열기"
+          >
+            <div class="featured-stage-spotlight" aria-hidden="true"></div>
+            <div class="featured-stage-media">
+              <img
+                id="heroFeaturedImg"
+                class="featured-stage-img"
+                src=""
+                alt=""
+                loading="eager"
+                decoding="async"
+                fetchpriority="high"
+              >
+              <div class="featured-fallback" id="heroArtworkFallback" hidden>
+                <span class="featured-fallback-label">작품을 불러오는 중이거나 이미지를 표시할 수 없습니다.</span>
+              </div>
+            </div>
+          </button>
+
+          <!-- 4단계: 대표 작품 캐러셀 네비게이션 -->
+          <div class="featured-carousel-nav" id="heroCarouselNav" aria-label="대표 작품 캐러셀 제어">
+            <button
+              type="button"
+              class="btn-carousel-arrow"
+              id="btnHeroPrev"
+              aria-label="이전 대표 작품"
+              title="이전 대표 작품"
+            >←</button>
+            <div class="featured-carousel-dots" id="heroCarouselDots" role="tablist" aria-label="대표 작품 선택"></div>
+            <button
+              type="button"
+              class="btn-carousel-arrow"
+              id="btnHeroNext"
+              aria-label="다음 대표 작품"
+              title="다음 대표 작품"
+            >→</button>
+          </div>
+        </div>
+
+        <div class="hero-meta-area">
+          <div class="hero-featured-card-info" id="heroFeaturedInfo">
+            <div class="hero-featured-top">
+              <span class="hero-featured-badge">FEATURED WORK</span>
+              <span class="hero-featured-count" id="heroFeaturedCount">01 / 01</span>
+            </div>
+            <h2 class="hero-featured-title" id="heroFeaturedTitle">작품을 불러오는 중...</h2>
+            <p class="hero-featured-desc" id="heroFeaturedDesc"></p>
+          </div>
+
+          <div class="hero-actions">
+            <a href="#gallerySection" class="btn-hero-enter" id="btnHeroEnter">
+              <span>전시장 입장하기</span>
+              <span aria-hidden="true">↓</span>
+            </a>
+            <button type="button" class="btn-hero-detail" id="btnHeroDetail">
+              <span>대표작 자세히 보기</span>
+              <span aria-hidden="true">→</span>
+            </button>
+          </div>
         </div>
       </div>
     </section>
@@ -77,7 +155,7 @@
       <div class="gallery-header">
         <div class="gallery-title-block">
           <span class="gallery-kicker">EXHIBITION ARCHIVE</span>
-          <h2 class="gallery-heading" id="galleryHeading">전체 작품</h2>
+          <h2 class="gallery-heading" id="galleryHeading" tabindex="-1">전체 작품</h2>
           <p class="gallery-count" id="galleryCountText">총 0점 전시 중</p>
         </div>
 
@@ -116,13 +194,35 @@
         <span class="about-kicker">ABOUT EXHIBITION</span>
         <h2 class="about-title">빼도리 온라인 전시회</h2>
         <p class="about-desc">
-          자연 속 작은 생명들의 다채로운 색감과 이야기를 디지털 드로잉으로 담아낸 개인 온라인 전시 공간입니다.
+          자연 속 작은 생명들의 다채로운 색감과 이야기를 디지털 드로잉으로 담아낸 개인 온라인 전시 공간입니다.<br>
           작품을 클릭하면 상세한 작품 이야기와 제작 과정을 담은 영상을 함께 감상하실 수 있습니다.
         </p>
       </div>
       <div class="about-meta">
+        <div class="footer-social-links" aria-label="외부 채널 링크">
+          <a
+            href="https://www.youtube.com/@%EB%B9%BC%EB%8F%84%EB%A6%AC%EB%84%A4"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="footer-icon-link footer-icon-youtube"
+            aria-label="빼도리네 유튜브 채널"
+            title="빼도리네 유튜브 채널"
+          >
+            <i class="fa-brands fa-youtube" aria-hidden="true"></i>
+          </a>
+          <a
+            href="http://datalyx.co.kr/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="footer-icon-link footer-icon-m"
+            aria-label="datalyx 바로가기"
+            title="datalyx.co.kr"
+          >
+            <span class="footer-m-mark" aria-hidden="true">M</span>
+          </a>
+        </div>
         <p class="about-copy">© 2026 빼도리 (Bbaedori). All rights reserved.</p>
-        <p class="about-sub">Static Digital Art Gallery · Hosted on GitHub Pages</p>
+        <p class="about-sub">Static Digital Art Gallery · Powerd by <a href="https://npdidim.com" target="_blank" rel="noopener noreferrer" class="footer-credit-link">NpDidim</a></p>
       </div>
     </div>
   </footer>

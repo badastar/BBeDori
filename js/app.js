@@ -13,9 +13,19 @@
     return;
   }
 
+  const HERO_AUTOPLAY_INTERVAL_MS = 6000;
+  const HERO_MANUAL_COOLDOWN_MS = 12000;
+
   // 상태 관리
   const state = {
     allArtworks: [],
+    featuredArtworks: [],
+    featuredIndex: 0,
+    heroRequestToken: 0,
+    heroAutoTimerId: null,
+    heroResumeTimerId: null,
+    heroSwitchTimeoutId: null,
+    entranceTimerId: null,
     filteredArtworks: [],
     activeListForDetail: [],
     selectedCategory: '전체',
@@ -31,6 +41,21 @@
 
   // DOM 참조
   const el = {
+    heroArtworkCard: document.getElementById('heroArtworkCard'),
+    heroFeaturedImg: document.getElementById('heroFeaturedImg'),
+    heroArtworkFallback: document.getElementById('heroArtworkFallback'),
+    heroFeaturedInfo: document.getElementById('heroFeaturedInfo'),
+    heroFeaturedCount: document.getElementById('heroFeaturedCount'),
+    heroFeaturedTitle: document.getElementById('heroFeaturedTitle'),
+    heroFeaturedDesc: document.getElementById('heroFeaturedDesc'),
+    btnHeroDetail: document.getElementById('btnHeroDetail'),
+    heroCarouselNav: document.getElementById('heroCarouselNav'),
+    btnHeroPrev: document.getElementById('btnHeroPrev'),
+    btnHeroNext: document.getElementById('btnHeroNext'),
+    heroCarouselDots: document.getElementById('heroCarouselDots'),
+
+    gallerySection: document.getElementById('gallerySection'),
+    galleryHeading: document.getElementById('galleryHeading'),
     categoryFilters: document.getElementById('categoryFilters'),
     searchInput: document.getElementById('artworkSearchInput'),
     galleryCountText: document.getElementById('galleryCountText'),
@@ -77,13 +102,208 @@
     } catch (error) {
       console.error('[BbaedoriApp] manifest.json 로드 실패:', error);
       state.allArtworks = [];
-      showGalleryStatus('작품 목록을 불러오지 못했습니다. 웹 서버(GitHub Pages 또는 localhost) 환경에서 실행 중인지 확인해 주세요.');
+      state.featuredArtworks = [];
+      showGalleryStatus('작품 목록을 불러오지 못했습니다. 웹 서버 환경에서 실행 중인지 확인해 주세요.');
+      await renderHeroFeatured(0);
+      renderHeroCarouselControls();
       renderCategoryFilters();
       return;
     }
 
+    const featured = Data.getFeaturedArtworks(state.allArtworks);
+    state.featuredArtworks = featured.length > 0 ? featured : state.allArtworks.slice(0, 1);
+    renderHeroCarouselControls();
+    await renderHeroFeatured(0);
+    startHeroAutoplay();
+
     renderCategoryFilters();
     applyFiltersAndRender();
+  }
+
+  // =========================================================================
+  // 3~4단계: 메인 히어로 대표 작품 쇼케이스 & 캐러셀 제어
+  // =========================================================================
+  function prefersReducedMotion() {
+    return typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  function extractHeroExcerpt(rawMd) {
+    if (!rawMd || typeof rawMd !== 'string') return '';
+    const { body } = Data.parseYamlFrontmatter(rawMd);
+    const lines = body.split('\n').map(l => l.trim());
+    for (const line of lines) {
+      if (!line) continue;
+      if (line.startsWith('#') || line.startsWith('---') || line.startsWith('>')) continue;
+      if (line.includes('youtube.com') || line.includes('youtu.be')) continue;
+      return line.length > 110 ? `${line.slice(0, 108)}…` : line;
+    }
+    return '';
+  }
+
+  function renderHeroCarouselControls() {
+    const list = state.featuredArtworks;
+    const hasMultiple = list.length > 1;
+
+    if (el.heroCarouselNav) {
+      el.heroCarouselNav.hidden = !hasMultiple;
+    }
+    if (el.btnHeroPrev) el.btnHeroPrev.disabled = !hasMultiple;
+    if (el.btnHeroNext) el.btnHeroNext.disabled = !hasMultiple;
+
+    if (!el.heroCarouselDots) return;
+    el.heroCarouselDots.innerHTML = '';
+
+    if (!hasMultiple) return;
+
+    list.forEach((art, idx) => {
+      const dot = document.createElement('button');
+      dot.type = 'button';
+      dot.className = 'carousel-dot' + (idx === state.featuredIndex ? ' active' : '');
+      dot.setAttribute('role', 'tab');
+      dot.setAttribute('aria-selected', idx === state.featuredIndex ? 'true' : 'false');
+      dot.setAttribute('aria-label', `${idx + 1}번 대표 작품 ${art.title} 보기`);
+      dot.addEventListener('click', () => {
+        goToFeatured(idx, { userInitiated: true });
+      });
+      el.heroCarouselDots.appendChild(dot);
+    });
+  }
+
+  function syncHeroDotsActive(activeIdx) {
+    if (!el.heroCarouselDots) return;
+    const dots = el.heroCarouselDots.querySelectorAll('.carousel-dot');
+    dots.forEach((dot, idx) => {
+      const isActive = idx === activeIdx;
+      dot.classList.toggle('active', isActive);
+      dot.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+  }
+
+  function applyImageDimensions(img, art) {
+    if (!img || !art) return;
+    if (typeof art.width === 'number' && typeof art.height === 'number') {
+      img.width = art.width;
+      img.height = art.height;
+    }
+  }
+
+  async function renderHeroFeatured(index = 0) {
+    const list = state.featuredArtworks;
+    if (!list || list.length === 0) {
+      if (el.heroFeaturedImg) el.heroFeaturedImg.hidden = true;
+      if (el.heroArtworkFallback) el.heroArtworkFallback.hidden = false;
+      if (el.heroFeaturedCount) el.heroFeaturedCount.textContent = '00 / 00';
+      if (el.heroFeaturedTitle) el.heroFeaturedTitle.textContent = '전시 작품 준비 중';
+      if (el.heroFeaturedDesc) el.heroFeaturedDesc.textContent = '대표 작품을 불러오지 못했습니다.';
+      if (el.heroArtworkCard) el.heroArtworkCard.disabled = true;
+      if (el.btnHeroDetail) el.btnHeroDetail.disabled = true;
+      return;
+    }
+
+    const safeIndex = ((index % list.length) + list.length) % list.length;
+    state.featuredIndex = safeIndex;
+    const art = list[safeIndex];
+
+    if (el.heroArtworkCard) {
+      el.heroArtworkCard.disabled = false;
+      el.heroArtworkCard.setAttribute('aria-label', `${art.title} 상세 감상 열기`);
+    }
+    if (el.btnHeroDetail) el.btnHeroDetail.disabled = false;
+
+    if (el.heroFeaturedCount) {
+      el.heroFeaturedCount.textContent = `${String(safeIndex + 1).padStart(2, '0')} / ${String(list.length).padStart(2, '0')}`;
+    }
+    if (el.heroFeaturedTitle) el.heroFeaturedTitle.textContent = art.title;
+    syncHeroDotsActive(safeIndex);
+
+    if (el.heroFeaturedImg) {
+      el.heroFeaturedImg.hidden = false;
+      if (el.heroArtworkFallback) el.heroArtworkFallback.hidden = true;
+      el.heroFeaturedImg.onerror = () => {
+        el.heroFeaturedImg.hidden = true;
+        if (el.heroArtworkFallback) el.heroArtworkFallback.hidden = false;
+      };
+      applyImageDimensions(el.heroFeaturedImg, art);
+      el.heroFeaturedImg.src = `./${art.imageUrl}`;
+      el.heroFeaturedImg.alt = art.title;
+    }
+
+    const reqToken = ++state.heroRequestToken;
+    const rawMd = await fetchDescriptionMarkdown(art.descriptionUrl);
+    if (reqToken !== state.heroRequestToken || state.featuredIndex !== safeIndex) return;
+    if (el.heroFeaturedDesc) {
+      el.heroFeaturedDesc.textContent = extractHeroExcerpt(rawMd) || '작품을 클릭하면 상세 설명과 이야기를 감상하실 수 있습니다.';
+    }
+  }
+
+  function goToFeatured(targetIndex, options = {}) {
+    const list = state.featuredArtworks;
+    if (!list || list.length <= 1) return;
+
+    const safeIndex = ((targetIndex % list.length) + list.length) % list.length;
+
+    if (options.userInitiated) {
+      pauseHeroAutoplayTemporarily();
+    }
+
+    if (state.heroSwitchTimeoutId !== null) {
+      clearTimeout(state.heroSwitchTimeoutId);
+      state.heroSwitchTimeoutId = null;
+    }
+
+    if (prefersReducedMotion()) {
+      renderHeroFeatured(safeIndex);
+      return;
+    }
+
+    if (el.heroArtworkCard) el.heroArtworkCard.classList.add('is-switching');
+    if (el.heroFeaturedInfo) el.heroFeaturedInfo.classList.add('is-switching');
+
+    state.heroSwitchTimeoutId = setTimeout(async () => {
+      state.heroSwitchTimeoutId = null;
+      await renderHeroFeatured(safeIndex);
+      if (el.heroArtworkCard) el.heroArtworkCard.classList.remove('is-switching');
+      if (el.heroFeaturedInfo) el.heroFeaturedInfo.classList.remove('is-switching');
+    }, 150);
+  }
+
+  function stopHeroAutoplay() {
+    if (state.heroAutoTimerId !== null) {
+      clearInterval(state.heroAutoTimerId);
+      state.heroAutoTimerId = null;
+    }
+    if (state.heroResumeTimerId !== null) {
+      clearTimeout(state.heroResumeTimerId);
+      state.heroResumeTimerId = null;
+    }
+  }
+
+  function startHeroAutoplay() {
+    stopHeroAutoplay();
+    if (prefersReducedMotion()) return;
+    if (document.hidden) return;
+    if (el.detailOverlay && !el.detailOverlay.hidden) return;
+    if (!state.featuredArtworks || state.featuredArtworks.length <= 1) return;
+
+    state.heroAutoTimerId = setInterval(() => {
+      if (document.hidden || (el.detailOverlay && !el.detailOverlay.hidden)) {
+        stopHeroAutoplay();
+        return;
+      }
+      goToFeatured(state.featuredIndex + 1, { userInitiated: false });
+    }, HERO_AUTOPLAY_INTERVAL_MS);
+  }
+
+  function pauseHeroAutoplayTemporarily() {
+    stopHeroAutoplay();
+    if (prefersReducedMotion()) return;
+    if (!state.featuredArtworks || state.featuredArtworks.length <= 1) return;
+
+    state.heroResumeTimerId = setTimeout(() => {
+      state.heroResumeTimerId = null;
+      startHeroAutoplay();
+    }, HERO_MANUAL_COOLDOWN_MS);
   }
 
   // =========================================================================
@@ -161,9 +381,10 @@
       thumbWrap.className = 'masonry-thumb-wrap';
 
       const img = document.createElement('img');
+      applyImageDimensions(img, art);
       img.src = `./${art.imageUrl}`;
       img.alt = art.title;
-      img.loading = idx < 4 ? 'eager' : 'lazy';
+      img.loading = 'lazy';
       img.decoding = 'async';
       img.addEventListener('error', () => {
         console.warn('[BbaedoriApp] 이미지 로드 실패:', art.filename);
@@ -231,10 +452,12 @@
       state.lastFocusedElement = options.triggerEl;
     }
 
-    // 이전 영상 재생 즉시 정지 및 DOM 제거
+    // 히어로 자동 캐러셀 일시정지 & 이전 영상 재생 즉시 정지 및 DOM 제거
+    stopHeroAutoplay();
     YouTube.clearVideoContainer(el.detailVideoContainer);
 
     // 기본 정보 즉시 반영
+    applyImageDimensions(el.detailImage, art);
     el.detailImage.src = `./${art.imageUrl}`;
     el.detailImage.alt = art.title;
     el.detailIndex.textContent = `/ ${String(artIndex + 1).padStart(2, '0')} · ${list.length}`;
@@ -320,6 +543,8 @@
       state.lastFocusedElement.focus();
       state.lastFocusedElement = null;
     }
+
+    startHeroAutoplay();
   }
 
   function navigateDetail(step) {
@@ -432,7 +657,152 @@
     }
   }
 
+  function openCurrentFeaturedDetail(triggerEl) {
+    const art = state.featuredArtworks[state.featuredIndex];
+    if (!art) return;
+    openDetail(art.id, { list: state.allArtworks, triggerEl });
+  }
+
+  function setFeaturedList(items) {
+    state.featuredArtworks = Array.isArray(items) ? items : [];
+    state.featuredIndex = 0;
+    renderHeroCarouselControls();
+    return renderHeroFeatured(0).then(() => {
+      startHeroAutoplay();
+    });
+  }
+
+  function enterExhibition(options = {}) {
+    if (!el.gallerySection) return;
+
+    const reduceMotion = prefersReducedMotion();
+    if (state.entranceTimerId !== null) {
+      clearTimeout(state.entranceTimerId);
+      state.entranceTimerId = null;
+    }
+
+    if (options.updateHash) {
+      try {
+        if (window.location.hash !== '#gallerySection') {
+          window.history.pushState({ section: 'gallery' }, '', '#gallerySection');
+        }
+      } catch (_) {
+        // file:// 제한 시 무시
+      }
+    }
+
+    if (!reduceMotion) {
+      el.gallerySection.classList.remove('is-entering-gallery');
+      // 리플로우 트리거로 재클릭 시에도 부드러운 입장 효과 재실행
+      void el.gallerySection.offsetWidth;
+      el.gallerySection.classList.add('is-entering-gallery');
+
+      const durationMs = window.innerWidth <= 760 ? 260 : 460;
+      state.entranceTimerId = setTimeout(() => {
+        el.gallerySection.classList.remove('is-entering-gallery');
+        state.entranceTimerId = null;
+      }, durationMs);
+    }
+
+    el.gallerySection.scrollIntoView({
+      behavior: reduceMotion ? 'auto' : 'smooth',
+      block: 'start'
+    });
+
+    if (el.galleryHeading) {
+      el.galleryHeading.focus({ preventScroll: true });
+    }
+  }
+
   function bindEvents() {
+    let heroDidSwipe = false;
+
+    // 히어로 대표작 클릭 -> 기존 상세 보기 연결
+    if (el.heroArtworkCard) {
+      el.heroArtworkCard.addEventListener('click', () => {
+        if (heroDidSwipe) {
+          heroDidSwipe = false;
+          return;
+        }
+        openCurrentFeaturedDetail(el.heroArtworkCard);
+      });
+    }
+    if (el.btnHeroDetail) {
+      el.btnHeroDetail.addEventListener('click', () => openCurrentFeaturedDetail(el.btnHeroDetail));
+    }
+
+    // 4단계: 대표 작품 캐러셀 이전/다음 & 키보드 접근성
+    if (el.btnHeroPrev) {
+      el.btnHeroPrev.addEventListener('click', () => goToFeatured(state.featuredIndex - 1, { userInitiated: true }));
+    }
+    if (el.btnHeroNext) {
+      el.btnHeroNext.addEventListener('click', () => goToFeatured(state.featuredIndex + 1, { userInitiated: true }));
+    }
+    if (el.heroCarouselNav) {
+      el.heroCarouselNav.addEventListener('keydown', event => {
+        if (event.key === 'ArrowLeft') {
+          event.preventDefault();
+          goToFeatured(state.featuredIndex - 1, { userInitiated: true });
+        } else if (event.key === 'ArrowRight') {
+          event.preventDefault();
+          goToFeatured(state.featuredIndex + 1, { userInitiated: true });
+        }
+      });
+    }
+
+    // 히어로 대표작 모바일 스와이프 지원
+    let heroTouchStartX = 0;
+    let heroTouchStartY = 0;
+    if (el.heroArtworkCard) {
+      el.heroArtworkCard.addEventListener('touchstart', event => {
+        if (event.touches.length !== 1) return;
+        heroDidSwipe = false;
+        heroTouchStartX = event.touches[0].clientX;
+        heroTouchStartY = event.touches[0].clientY;
+      }, { passive: true });
+
+      el.heroArtworkCard.addEventListener('touchend', event => {
+        if (event.changedTouches.length !== 1) return;
+        const dx = event.changedTouches[0].clientX - heroTouchStartX;
+        const dy = event.changedTouches[0].clientY - heroTouchStartY;
+        if (Math.abs(dx) > 48 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+          heroDidSwipe = true;
+          goToFeatured(state.featuredIndex + (dx > 0 ? -1 : 1), { userInitiated: true });
+        }
+      }, { passive: true });
+    }
+
+    // 탭 비활성화 시 히어로 자동 전환 중지, 복귀 시 재개
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        stopHeroAutoplay();
+      } else {
+        startHeroAutoplay();
+      }
+    });
+
+    // 6단계: 전시장 입장 인터랙션 (전시장 입장하기 / 전시작품 링크)
+    document.querySelectorAll('a[href="#gallerySection"]').forEach(link => {
+      link.addEventListener('click', event => {
+        if (!el.gallerySection) return;
+        event.preventDefault();
+        enterExhibition({ updateHash: true });
+      });
+    });
+
+    // 브라우저 뒤로 가기 시 상세 모달/해시 동기화
+    window.addEventListener('popstate', () => {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const artId = params.get('art') || params.get('id');
+        if (!artId && el.detailOverlay && !el.detailOverlay.hidden) {
+          closeDetail();
+        }
+      } catch (_) {
+        // ignore
+      }
+    });
+
     // 검색
     if (el.searchInput) {
       el.searchInput.addEventListener('input', event => {
@@ -525,11 +895,21 @@
     openDetail,
     closeDetail,
     navigateDetail,
+    renderHeroFeatured,
+    goToFeatured,
+    setFeaturedList,
+    startHeroAutoplay,
+    stopHeroAutoplay,
+    enterExhibition,
     startSlideshow,
     pauseSlideshow,
     stopSlideshow,
     getState: () => ({
       total: state.allArtworks.length,
+      featuredCount: state.featuredArtworks.length,
+      featuredIndex: state.featuredIndex,
+      heroAutoplayActive: state.heroAutoTimerId !== null,
+      heroResumePending: state.heroResumeTimerId !== null,
       filtered: state.filteredArtworks.length,
       currentDetailId: state.currentDetailId,
       slideState: state.slideState,

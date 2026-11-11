@@ -11,6 +11,7 @@
   --text-muted-light: #a8a8a8;
   --accent: #f15a24;
   --accent-hover: #ff6e3a;
+  --accent-on-light: #c84212;
   --grid-line: rgba(255, 255, 255, 0.06);
 
   --bg-gallery: #f6f5f2;
@@ -120,6 +121,76 @@ button {
   border-right: 1px solid var(--grid-line);
 }
 
+/* 5단계: 자연의 빛과 반딧불이 입자 효과 (CSS 기반, pointer-events: none) */
+.ambient-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.ambient-glow {
+  position: absolute;
+  top: 8%;
+  right: 8%;
+  width: min(56vw, 620px);
+  height: min(56vw, 620px);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(241, 90, 36, 0.11) 0%, rgba(247, 197, 136, 0.04) 42%, transparent 72%);
+  animation: ambientBreath 12s ease-in-out infinite alternate;
+  will-change: transform, opacity;
+}
+
+.ambient-particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background-color: #f7cf8e;
+  box-shadow: 0 0 10px 2px rgba(247, 207, 142, 0.45);
+  opacity: 0;
+  animation: ambientFloat 14s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.ambient-particle:nth-child(2) { top: 18%; left: 10%; width: 3px; height: 3px; animation-duration: 13s; animation-delay: 0s; }
+.ambient-particle:nth-child(3) { top: 68%; left: 16%; width: 4px; height: 4px; animation-duration: 16s; animation-delay: 2.5s; }
+.ambient-particle:nth-child(4) { top: 34%; left: 46%; width: 3px; height: 3px; animation-duration: 15s; animation-delay: 4s; }
+.ambient-particle:nth-child(5) { top: 76%; left: 42%; width: 5px; height: 5px; background-color: #f49b6a; animation-duration: 18s; animation-delay: 1s; }
+.ambient-particle:nth-child(6) { top: 20%; right: 12%; width: 4px; height: 4px; animation-duration: 14s; animation-delay: 3.2s; }
+.ambient-particle:nth-child(7) { top: 54%; right: 6%;  width: 3px; height: 3px; animation-duration: 17s; animation-delay: 5.5s; }
+.ambient-particle:nth-child(8) { top: 82%; right: 22%; width: 4px; height: 4px; animation-duration: 15s; animation-delay: 2s; }
+.ambient-particle:nth-child(9) { top: 44%; left: 8%;  width: 3px; height: 3px; background-color: #fff2d6; animation-duration: 19s; animation-delay: 6.5s; }
+
+@keyframes ambientBreath {
+  0% {
+    opacity: 0.65;
+    transform: translate3d(0, 0, 0) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(-12px, 10px, 0) scale(1.05);
+  }
+}
+
+@keyframes ambientFloat {
+  0%, 100% {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0) scale(0.8);
+  }
+  22% {
+    opacity: 0.68;
+  }
+  55% {
+    opacity: 0.38;
+    transform: translate3d(14px, -22px, 0) scale(1.1);
+  }
+  82% {
+    opacity: 0.72;
+  }
+}
+
 /* 상단 내비게이션 */
 .site-header {
   position: relative;
@@ -138,10 +209,17 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 12px;
-  font-size: 1.2rem;
-  letter-spacing: 0.04em;
+  font-size: 1.05rem;
+  letter-spacing: 0.14em;
   color: var(--text-light);
   min-height: 44px;
+}
+
+.brand-sub {
+  font-size: 0.86rem;
+  letter-spacing: 0.04em;
+  color: var(--text-muted-light);
+  margin-left: 6px;
 }
 
 .brand-dots {
@@ -209,63 +287,319 @@ button {
   transform: translateY(-1px);
 }
 
-/* 히어로 영역 */
+/* 히어로 영역 (3단계: 다크 전시장 몰입형 히어로 & 세로형 대표작 쇼케이스) */
 .hero-section {
   position: relative;
   z-index: 2;
-  padding: 40px 0 12px;
+  padding: clamp(20px, 3vw, 42px) 0 12px;
 }
 
-.hero-grid {
+.hero-showcase-grid {
   display: grid;
-  grid-template-columns: 1.35fr 1fr;
-  align-items: end;
-  gap: 32px;
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+  grid-template-rows: auto auto;
+  grid-template-areas:
+    "intro stage"
+    "meta  stage";
+  column-gap: clamp(24px, 4vw, 64px);
+  row-gap: 24px;
+  align-items: center;
+}
+
+.hero-intro-area {
+  grid-area: intro;
+  align-self: end;
+}
+
+.hero-stage-area {
+  grid-area: stage;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+}
+
+.hero-meta-area {
+  grid-area: meta;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.hero-eyebrow {
+  margin: 0 0 14px;
+  font-size: 0.78rem;
+  letter-spacing: 0.16em;
+  color: var(--accent);
 }
 
 .hero-title {
-  margin: 0;
-  font-size: clamp(2.1rem, 4.3vw, 3.85rem);
-  line-height: 1.2;
+  margin: 0 0 16px;
+  font-size: clamp(1.9rem, 3.6vw, 3.25rem);
+  line-height: 1.24;
   font-weight: 400;
   letter-spacing: -0.02em;
   color: var(--text-light);
-}
-
-.hero-sub-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 20px;
-  padding-bottom: 6px;
+  word-break: keep-all;
 }
 
 .hero-subtitle {
   margin: 0;
-  font-size: clamp(0.95rem, 1.1vw, 1.06rem);
-  line-height: 1.7;
+  max-width: 540px;
+  font-size: clamp(0.94rem, 1.05vw, 1.04rem);
+  line-height: 1.72;
+  color: var(--text-muted-light);
+  word-break: keep-all;
+}
+
+/* 대표 작품 세로형 전시장 액자 */
+.featured-stage-card {
+  position: relative;
+  width: min(100%, 420px);
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-card);
+  background-color: var(--bg-dark-card);
+  overflow: hidden;
+  display: block;
+  box-shadow: 0 26px 60px rgba(0, 0, 0, 0.55);
+  transition: transform var(--transition-base), border-color var(--transition-base), box-shadow var(--transition-base);
+}
+
+.featured-stage-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(241, 90, 36, 0.45);
+  box-shadow: 0 32px 72px rgba(0, 0, 0, 0.7);
+}
+
+.featured-stage-spotlight {
+  position: absolute;
+  inset: -20%;
+  background: radial-gradient(circle at 50% 40%, rgba(241, 90, 36, 0.14), transparent 65%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.featured-stage-media {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  aspect-ratio: 1640 / 2360;
+  background-color: var(--bg-matte);
+  padding: clamp(14px, 2vw, 24px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.featured-stage-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.12));
+  transition: transform 0.45s ease, opacity 0.24s ease;
+}
+
+.featured-stage-card.is-switching .featured-stage-img {
+  opacity: 0;
+  transform: translateY(4px);
+}
+
+.featured-stage-card:hover .featured-stage-img {
+  transform: scale(1.025);
+}
+
+.featured-fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  background-color: #1f1f1f;
+  color: var(--text-muted-light);
+  font-size: 0.92rem;
+}
+
+.featured-fallback[hidden] {
+  display: none;
+}
+
+/* 4단계: 대표 작품 캐러셀 네비게이션 */
+.featured-carousel-nav {
+  width: min(100%, 420px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.featured-carousel-nav[hidden] {
+  display: none;
+}
+
+.btn-carousel-arrow {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background-color: rgba(255, 255, 255, 0.04);
+  color: var(--text-light);
+  font-size: 1.05rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color var(--transition-base), border-color var(--transition-base), color var(--transition-base);
+}
+
+.btn-carousel-arrow:hover:not(:disabled) {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+}
+
+.btn-carousel-arrow:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.featured-carousel-dots {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.carousel-dot {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.carousel-dot::before {
+  content: '';
+  display: block;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.28);
+  transition: width 0.25s ease, background-color 0.25s ease;
+}
+
+.carousel-dot:hover::before {
+  background-color: rgba(255, 255, 255, 0.65);
+}
+
+.carousel-dot.active::before {
+  width: 20px;
+  background-color: var(--accent);
+}
+
+/* 좌측 하단 선택 대표작 정보 & 입장 버튼 */
+.hero-featured-card-info {
+  padding: 18px 20px;
+  border-radius: 12px;
+  background-color: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  max-width: 540px;
+  transition: opacity 0.24s ease;
+}
+
+.hero-featured-card-info.is-switching {
+  opacity: 0.25;
+}
+
+.hero-featured-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.hero-featured-badge {
+  font-size: 0.74rem;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+}
+
+.hero-featured-count {
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
   color: var(--text-muted-light);
 }
 
-.hero-explore-link {
+.hero-featured-title {
+  margin: 0 0 8px;
+  font-size: clamp(1.25rem, 1.8vw, 1.55rem);
+  font-weight: 400;
+  color: var(--text-light);
+  word-break: keep-all;
+}
+
+.hero-featured-desc {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.65;
+  color: var(--text-muted-light);
+  word-break: keep-all;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+
+.btn-hero-enter {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
+  min-height: 48px;
+  padding: 12px 28px;
+  border-radius: var(--radius-pill);
+  background-color: var(--accent);
+  color: #ffffff;
   font-size: 0.98rem;
-  color: var(--accent);
-  padding-bottom: 6px;
-  border-bottom: 1px solid rgba(241, 90, 36, 0.45);
-  transition: color var(--transition-base), border-color var(--transition-base);
+  transition: background-color var(--transition-base), transform var(--transition-base);
 }
 
-.hero-explore-link:hover {
-  color: var(--accent-hover);
-  border-bottom-color: var(--accent-hover);
+.btn-hero-enter:hover {
+  background-color: var(--accent-hover);
+  transform: translateY(-2px);
 }
 
-.explore-plus {
-  font-size: 1.15rem;
-  line-height: 1;
+.btn-hero-detail {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 12px 22px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background-color: transparent;
+  color: var(--text-light);
+  font-size: 0.94rem;
+  transition: border-color var(--transition-base), background-color var(--transition-base);
+}
+
+.btn-hero-detail:hover {
+  border-color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.08);
 }
 
 /* ==========================================================================
@@ -297,7 +631,7 @@ button {
   display: block;
   font-size: 0.78rem;
   letter-spacing: 0.14em;
-  color: var(--accent);
+  color: var(--accent-on-light);
   margin-bottom: 6px;
 }
 
@@ -306,6 +640,27 @@ button {
   font-size: clamp(1.7rem, 2.5vw, 2.3rem);
   font-weight: 400;
   line-height: 1.25;
+}
+
+.gallery-heading:focus {
+  outline: none;
+}
+
+/* 6단계: 전시장 입장 시 짧고 부드러운 전환 연출 */
+.gallery-section.is-entering-gallery .gallery-header,
+.gallery-section.is-entering-gallery .masonry-grid {
+  animation: galleryEntrance 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes galleryEntrance {
+  from {
+    opacity: 0.35;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .gallery-count {
@@ -466,7 +821,7 @@ button {
 }
 
 .about-col {
-  max-width: 620px;
+  max-width: 760px;
 }
 
 .about-kicker {
@@ -488,10 +843,61 @@ button {
   font-size: 0.96rem;
   color: var(--text-muted-light);
   line-height: 1.75;
+  word-break: keep-all;
 }
 
 .about-meta {
   text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.footer-social-links {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.footer-icon-link {
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  transition: transform var(--transition-base), filter var(--transition-base), border-color var(--transition-base);
+}
+
+.footer-icon-link:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.08);
+}
+
+.footer-icon-youtube {
+  background-color: #262626;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #ff2b2b;
+  font-size: 1.32rem;
+}
+
+.footer-icon-m {
+  background-color: #087f8c;
+  color: #e6f6eb;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+  font-weight: 700;
+  font-size: 1.38rem;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.footer-m-mark {
+  display: block;
+  transform: translateY(-0.5px);
 }
 
 .about-copy {
@@ -503,6 +909,17 @@ button {
   margin: 0;
   font-size: 0.82rem;
   color: var(--text-muted-light);
+}
+
+.footer-credit-link {
+  color: var(--text-light);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color var(--transition-base);
+}
+
+.footer-credit-link:hover {
+  color: var(--accent);
 }
 
 .btn-scroll-top {
@@ -748,14 +1165,14 @@ button {
 }
 
 .detail-description a {
-  color: var(--accent);
+  color: var(--accent-on-light);
   text-decoration: underline;
 }
 
 .detail-no-description {
   margin: 0;
   font-size: 0.92rem;
-  color: #888888;
+  color: var(--text-muted-dark);
 }
 
 /* 선택적 유튜브 영상 영역 (STEP 4: 비어있으면 공간 0) */
@@ -806,11 +1223,21 @@ button {
   gap: 10px;
 }
 
-.detail-nav-buttons,
+.detail-nav-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 8px;
+}
+
 .detail-slide-bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
+  width: 100%;
   gap: 8px;
 }
 
@@ -857,6 +1284,10 @@ button {
   color: var(--text-muted-dark);
 }
 
+.slide-status:empty {
+  display: none;
+}
+
 /* ==========================================================================
    반응형 브레이크포인트 (PC / 태블릿 / 스마트폰)
    ========================================================================== */
@@ -879,9 +1310,23 @@ button {
 }
 
 @media (max-width: 899px) {
-  .hero-grid {
+  .hero-showcase-grid {
     grid-template-columns: 1fr;
-    gap: 20px;
+    grid-template-rows: auto;
+    grid-template-areas:
+      "intro"
+      "stage"
+      "meta";
+    gap: 22px;
+  }
+
+  .featured-stage-card,
+  .featured-carousel-nav {
+    width: min(100%, 360px);
+  }
+
+  .featured-stage-card.is-switching .featured-stage-img {
+    transform: none;
   }
 
   .detail-overlay {
@@ -931,12 +1376,31 @@ button {
     display: none;
   }
 
+  .brand-sub {
+    display: none;
+  }
+
   .editorial-stage {
     padding-bottom: 36px;
   }
 
   .hero-section {
-    padding: 24px 0 8px;
+    padding: 12px 0 8px;
+  }
+
+  .featured-stage-card,
+  .featured-carousel-nav {
+    width: min(100%, 330px);
+  }
+
+  .hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn-hero-enter,
+  .btn-hero-detail {
+    width: 100%;
   }
 
   /* 모바일 Masonry: 2열 */
@@ -957,14 +1421,43 @@ button {
     width: 100%;
   }
 
+  /* 5단계 모바일: 입자 수 4개로 축소 및 애니메이션 빈도 완화 */
+  .ambient-particle:nth-child(n+6) {
+    display: none;
+  }
+
+  .ambient-particle {
+    animation-duration: 22s;
+  }
+
+  .ambient-glow {
+    animation: none;
+    opacity: 0.7;
+  }
+
+  /* 6단계 모바일: 전환 시간 단축 */
+  .gallery-section.is-entering-gallery .gallery-header,
+  .gallery-section.is-entering-gallery .masonry-grid {
+    animation-duration: 0.22s;
+  }
+
   .about-meta {
     text-align: left;
+    align-items: flex-start;
+  }
+
+  .footer-social-links {
+    justify-content: flex-start;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
+  }
+
+  .ambient-layer {
+    display: none;
   }
 
   *,
@@ -974,6 +1467,8 @@ button {
     animation-duration: 0.01ms !important;
   }
 
+  .featured-stage-card:hover,
+  .featured-stage-card:hover .featured-stage-img,
   .masonry-card:hover,
   .masonry-card:hover .masonry-thumb-wrap img {
     transform: none;
