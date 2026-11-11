@@ -14,19 +14,35 @@ const REDIS_HASH_KEY = 'bbedori:likes';
 const VALID_ID_RE = /^[a-zA-Z0-9_-]{1,32}$/;
 
 function getRedisCredentials() {
-  const url =
-    process.env.UPSTASH_REDIS_REST_URL ||
-    process.env.KV_REST_API_URL ||
-    '';
-  const token =
-    process.env.UPSTASH_REDIS_REST_TOKEN ||
-    process.env.KV_REST_API_TOKEN ||
-    '';
-  if (!url || !token) return null;
-  return {
-    url: url.replace(/\/+$/, ''),
-    token
-  };
+  const directPairs = [
+    ['UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN'],
+    ['KV_REST_API_URL', 'KV_REST_API_TOKEN'],
+    ['STORAGE_KV_REST_API_URL', 'STORAGE_KV_REST_API_TOKEN'],
+    ['STORAGE_UPSTASH_REDIS_REST_URL', 'STORAGE_UPSTASH_REDIS_REST_TOKEN'],
+    ['STORAGE_REST_API_URL', 'STORAGE_REST_API_TOKEN']
+  ];
+
+  for (const [urlKey, tokenKey] of directPairs) {
+    const url = process.env[urlKey];
+    const token = process.env[tokenKey];
+    if (url && token && /^https:\/\//i.test(url)) {
+      return { url: url.replace(/\/+$/, ''), token };
+    }
+  }
+
+  // Vercel Integration에서 커스텀 Prefix(예: STORAGE_...)를 붙였을 때도 자동 인식
+  for (const key of Object.keys(process.env)) {
+    if (/_REST(_API)?_URL$/.test(key)) {
+      const url = process.env[key];
+      const tokenKey = key.replace(/_URL$/, '_TOKEN');
+      const token = process.env[tokenKey];
+      if (url && token && /^https:\/\//i.test(url)) {
+        return { url: url.replace(/\/+$/, ''), token };
+      }
+    }
+  }
+
+  return null;
 }
 
 async function runRedisCommand(creds, command) {
