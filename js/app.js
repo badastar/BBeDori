@@ -13,8 +13,8 @@
     return;
   }
 
-  const HERO_AUTOPLAY_INTERVAL_MS = 6000;
-  const HERO_MANUAL_COOLDOWN_MS = 12000;
+  const HERO_AUTOPLAY_INTERVAL_MS = 5000;
+  const HERO_MANUAL_COOLDOWN_MS = 10000;
 
   // 상태 관리
   const state = {
@@ -235,6 +235,25 @@
     if (el.heroFeaturedDesc) {
       el.heroFeaturedDesc.textContent = extractHeroExcerpt(rawMd) || '작품을 클릭하면 상세 설명과 이야기를 감상하실 수 있습니다.';
     }
+
+    // 다음 대표작 선로딩으로 5초 슬라이드 전환 시 끊김 방지
+    if (list.length > 1) {
+      const nextArt = list[(safeIndex + 1) % list.length];
+      if (nextArt && nextArt.imageUrl) {
+        const preload = new Image();
+        preload.src = `./${nextArt.imageUrl}`;
+      }
+    }
+  }
+
+  function clearHeroSlideClasses() {
+    if (!el.heroArtworkCard) return;
+    el.heroArtworkCard.classList.remove(
+      'is-sliding-out-next',
+      'is-sliding-out-prev',
+      'is-sliding-in-next',
+      'is-sliding-in-prev'
+    );
   }
 
   function goToFeatured(targetIndex, options = {}) {
@@ -242,6 +261,9 @@
     if (!list || list.length <= 1) return;
 
     const safeIndex = ((targetIndex % list.length) + list.length) % list.length;
+    const dir = options.direction === 'prev' || (options.direction !== 'next' && targetIndex < state.featuredIndex)
+      ? 'prev'
+      : 'next';
 
     if (options.userInitiated) {
       pauseHeroAutoplayTemporarily();
@@ -253,19 +275,30 @@
     }
 
     if (prefersReducedMotion()) {
+      clearHeroSlideClasses();
       renderHeroFeatured(safeIndex);
       return;
     }
 
-    if (el.heroArtworkCard) el.heroArtworkCard.classList.add('is-switching');
+    clearHeroSlideClasses();
+    if (el.heroArtworkCard) {
+      el.heroArtworkCard.classList.add(dir === 'prev' ? 'is-sliding-out-prev' : 'is-sliding-out-next');
+    }
     if (el.heroFeaturedInfo) el.heroFeaturedInfo.classList.add('is-switching');
 
     state.heroSwitchTimeoutId = setTimeout(async () => {
       state.heroSwitchTimeoutId = null;
+      clearHeroSlideClasses();
+      if (el.heroArtworkCard) {
+        el.heroArtworkCard.classList.add(dir === 'prev' ? 'is-sliding-in-prev' : 'is-sliding-in-next');
+      }
       await renderHeroFeatured(safeIndex);
-      if (el.heroArtworkCard) el.heroArtworkCard.classList.remove('is-switching');
+      if (el.heroArtworkCard) {
+        void el.heroArtworkCard.offsetWidth;
+        clearHeroSlideClasses();
+      }
       if (el.heroFeaturedInfo) el.heroFeaturedInfo.classList.remove('is-switching');
-    }, 150);
+    }, 180);
   }
 
   function stopHeroAutoplay() {
@@ -281,7 +314,6 @@
 
   function startHeroAutoplay() {
     stopHeroAutoplay();
-    if (prefersReducedMotion()) return;
     if (document.hidden) return;
     if (el.detailOverlay && !el.detailOverlay.hidden) return;
     if (!state.featuredArtworks || state.featuredArtworks.length <= 1) return;
@@ -291,13 +323,12 @@
         stopHeroAutoplay();
         return;
       }
-      goToFeatured(state.featuredIndex + 1, { userInitiated: false });
+      goToFeatured(state.featuredIndex + 1, { userInitiated: false, direction: 'next' });
     }, HERO_AUTOPLAY_INTERVAL_MS);
   }
 
   function pauseHeroAutoplayTemporarily() {
     stopHeroAutoplay();
-    if (prefersReducedMotion()) return;
     if (!state.featuredArtworks || state.featuredArtworks.length <= 1) return;
 
     state.heroResumeTimerId = setTimeout(() => {
@@ -733,19 +764,19 @@
 
     // 4단계: 대표 작품 캐러셀 이전/다음 & 키보드 접근성
     if (el.btnHeroPrev) {
-      el.btnHeroPrev.addEventListener('click', () => goToFeatured(state.featuredIndex - 1, { userInitiated: true }));
+      el.btnHeroPrev.addEventListener('click', () => goToFeatured(state.featuredIndex - 1, { userInitiated: true, direction: 'prev' }));
     }
     if (el.btnHeroNext) {
-      el.btnHeroNext.addEventListener('click', () => goToFeatured(state.featuredIndex + 1, { userInitiated: true }));
+      el.btnHeroNext.addEventListener('click', () => goToFeatured(state.featuredIndex + 1, { userInitiated: true, direction: 'next' }));
     }
     if (el.heroCarouselNav) {
       el.heroCarouselNav.addEventListener('keydown', event => {
         if (event.key === 'ArrowLeft') {
           event.preventDefault();
-          goToFeatured(state.featuredIndex - 1, { userInitiated: true });
+          goToFeatured(state.featuredIndex - 1, { userInitiated: true, direction: 'prev' });
         } else if (event.key === 'ArrowRight') {
           event.preventDefault();
-          goToFeatured(state.featuredIndex + 1, { userInitiated: true });
+          goToFeatured(state.featuredIndex + 1, { userInitiated: true, direction: 'next' });
         }
       });
     }
@@ -767,7 +798,8 @@
         const dy = event.changedTouches[0].clientY - heroTouchStartY;
         if (Math.abs(dx) > 48 && Math.abs(dx) > Math.abs(dy) * 1.2) {
           heroDidSwipe = true;
-          goToFeatured(state.featuredIndex + (dx > 0 ? -1 : 1), { userInitiated: true });
+          const dir = dx > 0 ? 'prev' : 'next';
+          goToFeatured(state.featuredIndex + (dx > 0 ? -1 : 1), { userInitiated: true, direction: dir });
         }
       }, { passive: true });
     }

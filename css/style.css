@@ -392,6 +392,7 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
 }
 
 .featured-stage-img {
@@ -400,12 +401,29 @@ button {
   object-fit: contain;
   display: block;
   filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.12));
-  transition: transform 0.45s ease, opacity 0.24s ease;
+  transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.28s ease;
 }
 
-.featured-stage-card.is-switching .featured-stage-img {
+.featured-stage-card.is-sliding-out-next .featured-stage-img {
   opacity: 0;
-  transform: translateY(4px);
+  transform: translateX(-32px);
+}
+
+.featured-stage-card.is-sliding-out-prev .featured-stage-img {
+  opacity: 0;
+  transform: translateX(32px);
+}
+
+.featured-stage-card.is-sliding-in-next .featured-stage-img {
+  opacity: 0;
+  transform: translateX(32px);
+  transition: none;
+}
+
+.featured-stage-card.is-sliding-in-prev .featured-stage-img {
+  opacity: 0;
+  transform: translateX(-32px);
+  transition: none;
 }
 
 .featured-stage-card:hover .featured-stage-img {
@@ -1343,8 +1361,14 @@ button {
     width: min(100%, 360px);
   }
 
-  .featured-stage-card.is-switching .featured-stage-img {
-    transform: none;
+  .featured-stage-card.is-sliding-out-next .featured-stage-img,
+  .featured-stage-card.is-sliding-in-prev .featured-stage-img {
+    transform: translateX(-18px);
+  }
+
+  .featured-stage-card.is-sliding-out-prev .featured-stage-img,
+  .featured-stage-card.is-sliding-in-next .featured-stage-img {
+    transform: translateX(18px);
   }
 
   .detail-overlay {
