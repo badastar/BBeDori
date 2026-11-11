@@ -5,7 +5,9 @@
     "category": "작품",
     "description": "가도리.md",
     "order": 1,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art002",
@@ -13,7 +15,9 @@
     "category": "작품",
     "description": "갈도리.md",
     "order": 2,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art003",
@@ -21,7 +25,9 @@
     "category": "작품",
     "description": "고라도리.md",
     "order": 3,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art004",
@@ -29,7 +35,9 @@
     "category": "작품",
     "description": "고뤠도리.md",
     "order": 4,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art005",
@@ -37,7 +45,10 @@
     "category": "작품",
     "description": "고잠도리.md",
     "order": 5,
-    "featured": false
+    "featured": true,
+    "featuredOrder": 4,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art006",
@@ -45,7 +56,9 @@
     "category": "작품",
     "description": "곰도리.md",
     "order": 6,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art007",
@@ -53,7 +66,10 @@
     "category": "작품",
     "description": "귀뚜도리.md",
     "order": 7,
-    "featured": false
+    "featured": true,
+    "featuredOrder": 5,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art008",
@@ -61,7 +77,9 @@
     "category": "작품",
     "description": "그냥벌.md",
     "order": 8,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art009",
@@ -69,7 +87,9 @@
     "category": "작품",
     "description": "기도리.md",
     "order": 9,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art010",
@@ -77,7 +97,9 @@
     "category": "작품",
     "description": "꼴벌인듯도리.md",
     "order": 10,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art011",
@@ -85,7 +107,9 @@
     "category": "작품",
     "description": "꽃도리.md",
     "order": 11,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art012",
@@ -93,7 +117,9 @@
     "category": "작품",
     "description": "나는소띠.md",
     "order": 12,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art013",
@@ -101,7 +127,9 @@
     "category": "작품",
     "description": "날도리.md",
     "order": 13,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art014",
@@ -109,7 +137,9 @@
     "category": "작품",
     "description": "다도리.md",
     "order": 14,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art015",
@@ -117,7 +147,9 @@
     "category": "작품",
     "description": "당도리.md",
     "order": 15,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art016",
@@ -125,7 +157,9 @@
     "category": "작품",
     "description": "댕도리.md",
     "order": 16,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art017",
@@ -133,7 +167,9 @@
     "category": "작품",
     "description": "독도리.md",
     "order": 17,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art018",
@@ -141,7 +177,10 @@
     "category": "작품",
     "description": "땅강도리.md",
     "order": 18,
-    "featured": false
+    "featured": true,
+    "featuredOrder": 1,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art019",
@@ -149,23 +188,30 @@
     "category": "작품",
     "description": "매도리.md",
     "order": 19,
-    "featured": false
+    "featured": true,
+    "featuredOrder": 2,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art020",
-    "filename": "메도리(1).PNG",
-    "category": "작품",
-    "description": "메도리(1).md",
-    "order": 20,
-    "featured": false
-  },
-  {
-    "id": "art021",
     "filename": "메도리.PNG",
     "category": "작품",
     "description": "메도리.md",
+    "order": 20,
+    "featured": false,
+    "width": 1640,
+    "height": 2360
+  },
+  {
+    "id": "art021",
+    "filename": "메도리(1).PNG",
+    "category": "작품",
+    "description": "메도리(1).md",
     "order": 21,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art022",
@@ -173,7 +219,9 @@
     "category": "작품",
     "description": "메도리투.md",
     "order": 22,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art023",
@@ -181,7 +229,9 @@
     "category": "작품",
     "description": "무도리.md",
     "order": 23,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art024",
@@ -189,7 +239,10 @@
     "category": "작품",
     "description": "미도리.md",
     "order": 24,
-    "featured": false
+    "featured": true,
+    "featuredOrder": 7,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art025",
@@ -197,7 +250,9 @@
     "category": "작품",
     "description": "바도리.md",
     "order": 25,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art026",
@@ -205,7 +260,9 @@
     "category": "작품",
     "description": "박도리.md",
     "order": 26,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art027",
@@ -213,7 +270,9 @@
     "category": "작품",
     "description": "밤개도리.md",
     "order": 27,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art028",
@@ -221,7 +280,9 @@
     "category": "작품",
     "description": "벽새꽃.md",
     "order": 28,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art029",
@@ -229,7 +290,9 @@
     "category": "작품",
     "description": "붉은말.md",
     "order": 29,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art030",
@@ -237,7 +300,9 @@
     "category": "작품",
     "description": "붕도리.md",
     "order": 30,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art031",
@@ -245,7 +310,9 @@
     "category": "작품",
     "description": "사도리.md",
     "order": 31,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art032",
@@ -253,7 +320,9 @@
     "category": "작품",
     "description": "사도리원.md",
     "order": 32,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art033",
@@ -261,7 +330,9 @@
     "category": "작품",
     "description": "사도리포.md",
     "order": 33,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art034",
@@ -269,7 +340,9 @@
     "category": "작품",
     "description": "새도리.md",
     "order": 34,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art035",
@@ -277,7 +350,9 @@
     "category": "작품",
     "description": "쇠도리(소똥구리).md",
     "order": 35,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art036",
@@ -285,7 +360,9 @@
     "category": "작품",
     "description": "시조도리.md",
     "order": 36,
-    "featured": false
+    "featured": false,
+    "width": 1407,
+    "height": 2118
   },
   {
     "id": "art037",
@@ -293,7 +370,9 @@
     "category": "작품",
     "description": "아날도리.md",
     "order": 37,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art038",
@@ -301,7 +380,9 @@
     "category": "작품",
     "description": "아바타도루크.md",
     "order": 38,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art039",
@@ -309,7 +390,9 @@
     "category": "작품",
     "description": "애도리.md",
     "order": 39,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art040",
@@ -317,7 +400,9 @@
     "category": "작품",
     "description": "앵도리.md",
     "order": 40,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art041",
@@ -325,7 +410,9 @@
     "category": "작품",
     "description": "엉도리.md",
     "order": 41,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art042",
@@ -333,7 +420,9 @@
     "category": "작품",
     "description": "열도리.md",
     "order": 42,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art043",
@@ -341,7 +430,9 @@
     "category": "작품",
     "description": "열도리투.md",
     "order": 43,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art044",
@@ -349,7 +440,9 @@
     "category": "작품",
     "description": "왕거미.md",
     "order": 44,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art045",
@@ -357,7 +450,9 @@
     "category": "작품",
     "description": "외파도리.md",
     "order": 45,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art046",
@@ -365,23 +460,29 @@
     "category": "작품",
     "description": "잠도리.md",
     "order": 46,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art047",
-    "filename": "장수도리(1).PNG",
-    "category": "작품",
-    "description": "장수도리(1).md",
-    "order": 47,
-    "featured": false
-  },
-  {
-    "id": "art048",
     "filename": "장수도리.png",
     "category": "작품",
     "description": "장수도리.md",
+    "order": 47,
+    "featured": false,
+    "width": 1640,
+    "height": 2360
+  },
+  {
+    "id": "art048",
+    "filename": "장수도리(1).PNG",
+    "category": "작품",
+    "description": "장수도리(1).md",
     "order": 48,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art049",
@@ -389,7 +490,10 @@
     "category": "작품",
     "description": "장수말벌.md",
     "order": 49,
-    "featured": false
+    "featured": true,
+    "featuredOrder": 3,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art050",
@@ -397,7 +501,9 @@
     "category": "작품",
     "description": "족제비.md",
     "order": 50,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art051",
@@ -405,7 +511,9 @@
     "category": "작품",
     "description": "지네.md",
     "order": 51,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art052",
@@ -413,7 +521,9 @@
     "category": "작품",
     "description": "징도리.md",
     "order": 52,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art053",
@@ -421,7 +531,9 @@
     "category": "작품",
     "description": "참도리.md",
     "order": 53,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art054",
@@ -429,31 +541,39 @@
     "category": "작품",
     "description": "치도리.md",
     "order": 54,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art055",
-    "filename": "코도리(1).PNG",
-    "category": "작품",
-    "description": "코도리(1).md",
-    "order": 55,
-    "featured": false
-  },
-  {
-    "id": "art056",
-    "filename": "코도리(2).PNG",
-    "category": "작품",
-    "description": "코도리(2).md",
-    "order": 56,
-    "featured": false
-  },
-  {
-    "id": "art057",
     "filename": "코도리.PNG",
     "category": "작품",
     "description": "코도리.md",
+    "order": 55,
+    "featured": false,
+    "width": 1640,
+    "height": 2360
+  },
+  {
+    "id": "art056",
+    "filename": "코도리(1).PNG",
+    "category": "작품",
+    "description": "코도리(1).md",
+    "order": 56,
+    "featured": false,
+    "width": 1640,
+    "height": 2360
+  },
+  {
+    "id": "art057",
+    "filename": "코도리(2).PNG",
+    "category": "작품",
+    "description": "코도리(2).md",
     "order": 57,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art058",
@@ -461,7 +581,9 @@
     "category": "작품",
     "description": "코발트블루도리.md",
     "order": 58,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art059",
@@ -469,7 +591,9 @@
     "category": "작품",
     "description": "티도리.md",
     "order": 59,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art060",
@@ -477,7 +601,9 @@
     "category": "작품",
     "description": "파도리.md",
     "order": 60,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art061",
@@ -485,7 +611,9 @@
     "category": "작품",
     "description": "풀풀나비.md",
     "order": 61,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art062",
@@ -493,23 +621,29 @@
     "category": "작품",
     "description": "풍도리.md",
     "order": 62,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art063",
-    "filename": "하도리(1).PNG",
-    "category": "작품",
-    "description": "하도리(1).md",
-    "order": 63,
-    "featured": false
-  },
-  {
-    "id": "art064",
     "filename": "하도리.PNG",
     "category": "작품",
     "description": "하도리.md",
+    "order": 63,
+    "featured": false,
+    "width": 1640,
+    "height": 2360
+  },
+  {
+    "id": "art064",
+    "filename": "하도리(1).PNG",
+    "category": "작품",
+    "description": "하도리(1).md",
     "order": 64,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art065",
@@ -517,7 +651,9 @@
     "category": "작품",
     "description": "호도리.md",
     "order": 65,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art066",
@@ -525,7 +661,10 @@
     "category": "작품",
     "description": "호박벌.md",
     "order": 66,
-    "featured": false
+    "featured": true,
+    "featuredOrder": 6,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art067",
@@ -533,23 +672,30 @@
     "category": "작품",
     "description": "호주불개미.md",
     "order": 67,
-    "featured": false
+    "featured": true,
+    "featuredOrder": 8,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art068",
-    "filename": "화나도리(1).PNG",
-    "category": "작품",
-    "description": "화나도리(1).md",
-    "order": 68,
-    "featured": false
-  },
-  {
-    "id": "art069",
     "filename": "화나도리.PNG",
     "category": "작품",
     "description": "화나도리.md",
+    "order": 68,
+    "featured": false,
+    "width": 1640,
+    "height": 2360
+  },
+  {
+    "id": "art069",
+    "filename": "화나도리(1).PNG",
+    "category": "작품",
+    "description": "화나도리(1).md",
     "order": 69,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art070",
@@ -557,7 +703,9 @@
     "category": "작품",
     "description": "화애벌도리.md",
     "order": 70,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   },
   {
     "id": "art071",
@@ -565,6 +713,8 @@
     "category": "작품",
     "description": "화열도리.md",
     "order": 71,
-    "featured": false
+    "featured": false,
+    "width": 1640,
+    "height": 2360
   }
 ]

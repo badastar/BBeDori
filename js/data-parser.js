@@ -169,6 +169,7 @@
     });
 
     // 링크 [text](url) — http/https 프로토콜만 허용
+    const linkTokens = [];
     output = output.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, label, rawHref) => {
       // escapeHtml로 &amp; 등이 들어있을 수 있으므로 URL 검사용 복원
       const unescapedHref = rawHref
@@ -177,14 +178,30 @@
         .replace(/&#39;/g, "'");
       const safeHref = sanitizeLinkUrl(unescapedHref);
       if (!safeHref) return label;
-      return `<a href="${escapeHtml(safeHref)}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+      const idx = linkTokens.length;
+      linkTokens.push(`<a href="${escapeHtml(safeHref)}" target="_blank" rel="noopener noreferrer">${label}</a>`);
+      return `\u0000LINK${idx}\u0000`;
+    });
+
+    // 일반 URL 자동 링크 (https:// 또는 http://)
+    output = output.replace(/(https?:\/\/[^\s<>"'`]+)/g, rawUrl => {
+      const unescaped = rawUrl
+        .replace(/&amp;/g, '&')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'");
+      const safeHref = sanitizeLinkUrl(unescaped);
+      if (!safeHref) return rawUrl;
+      const idx = linkTokens.length;
+      linkTokens.push(`<a href="${escapeHtml(safeHref)}" target="_blank" rel="noopener noreferrer">${rawUrl}</a>`);
+      return `\u0000LINK${idx}\u0000`;
     });
 
     // 굵게(**text**) 및 기울임(*text*)
     output = output.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
     output = output.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
 
-    // 인라인 코드 복원
+    // 링크 및 인라인 코드 복원
+    output = output.replace(/\u0000LINK(\d+)\u0000/g, (_, idx) => linkTokens[Number(idx)] || '');
     output = output.replace(/\u0000CODE(\d+)\u0000/g, (_, idx) => codeTokens[Number(idx)] || '');
     return output;
   }
@@ -307,7 +324,7 @@
   }
 
   /**
-   * manifest.json 항목 검증, 작품명/경로 생성, order 오름차순 정렬
+   * manifest.json 항목 검증, 작품명/경로 생성, 이름 가나다 순 정렬
    * @param {Array} rawItems
    * @returns {Array}
    */
@@ -332,6 +349,11 @@
         : `${deriveTitleFromFilename(filename).replace(/ /g, '_')}.md`;
 
       const numericOrder = Number.isFinite(Number(item.order)) ? Number(item.order) : i + 1;
+      const featuredOrder = item.featuredOrder !== undefined && item.featuredOrder !== null && Number.isFinite(Number(item.featuredOrder))
+        ? Number(item.featuredOrder)
+        : null;
+      const width = Number.isFinite(Number(item.width)) && Number(item.width) > 0 ? Number(item.width) : null;
+      const height = Number.isFinite(Number(item.height)) && Number(item.height) > 0 ? Number(item.height) : null;
 
       valid.push({
         id: String(item.id).trim(),
@@ -341,13 +363,19 @@
         description: descFilename,
         order: numericOrder,
         featured: Boolean(item.featured),
+        featuredOrder,
+        width,
+        height,
         imageUrl: buildArtworkPath(filename),
         descriptionUrl: buildDescriptionPath(descFilename),
         _index: i
       });
     }
 
+    // 전시회 정렬 기준: 이름 가나다 순 (한국어 로케일 정렬, 동일 제목 시 order -> 입력 순)
     valid.sort((a, b) => {
+      const titleCmp = a.title.localeCompare(b.title, 'ko-KR', { numeric: true, sensitivity: 'base' });
+      if (titleCmp !== 0) return titleCmp;
       if (a.order !== b.order) return a.order - b.order;
       return a._index - b._index;
     });
@@ -356,14 +384,26 @@
   }
 
   /**
-   * 메인 쇼케이스용 대표 작품 추출 (featured: true 중 order 순 최대 3개)
+   * 메인 쇼케이스용 대표 작품 추출 (featured: true 중 featuredOrder -> order 순)
    * @param {Array} sortedArtworks
-   * @param {number} maxCount
+   * @param {number|null} [maxCount]
    * @returns {Array}
    */
-  function getFeaturedArtworks(sortedArtworks, maxCount = 3) {
+  function getFeaturedArtworks(sortedArtworks, maxCount = null) {
     if (!Array.isArray(sortedArtworks)) return [];
-    return sortedArtworks.filter(item => item.featured === true).slice(0, maxCount);
+    const featured = sortedArtworks.filter(item => item.featured === true);
+    featured.sort((a, b) => {
+      const aHas = typeof a.featuredOrder === 'number';
+      const bHas = typeof b.featuredOrder === 'number';
+      if (aHas && bHas && a.featuredOrder !== b.featuredOrder) {
+        return a.featuredOrder - b.featuredOrder;
+      }
+      if (aHas !== bHas) return aHas ? -1 : 1;
+      return a.order - b.order;
+    });
+    return typeof maxCount === 'number' && maxCount > 0
+      ? featured.slice(0, maxCount)
+      : featured;
   }
 
   return {
