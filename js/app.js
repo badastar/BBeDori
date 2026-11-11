@@ -31,7 +31,6 @@
 
   // DOM 참조
   const el = {
-    featuredGrid: document.getElementById('featuredGrid'),
     categoryFilters: document.getElementById('categoryFilters'),
     searchInput: document.getElementById('artworkSearchInput'),
     galleryCountText: document.getElementById('galleryCountText'),
@@ -57,13 +56,6 @@
     slideStatus: document.getElementById('slideStatus')
   };
 
-  // 대표 작품 카드 장식용 미니멀 SVG 아이콘 (레퍼런스 1 반영)
-  const FEATURED_ICONS = [
-    '<svg class="featured-icon" viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><polygon points="18,3 31,10.5 31,25.5 18,33 5,25.5 5,10.5"/><polygon points="18,8.5 26,13 26,23 18,27.5 10,23 10,13"/></svg>',
-    '<svg class="featured-icon" viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><circle cx="12" cy="12" r="5.5"/><circle cx="24" cy="12" r="5.5"/><circle cx="12" cy="24" r="5.5"/><circle cx="24" cy="24" r="5.5"/></svg>',
-    '<svg class="featured-icon" viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><circle cx="18" cy="18" r="13"/><circle cx="18" cy="18" r="8"/><circle cx="18" cy="18" r="3"/></svg>'
-  ];
-
   // =========================================================================
   // 초기화
   // =========================================================================
@@ -86,75 +78,12 @@
       console.error('[BbaedoriApp] manifest.json 로드 실패:', error);
       state.allArtworks = [];
       showGalleryStatus('작품 목록을 불러오지 못했습니다. 웹 서버(GitHub Pages 또는 localhost) 환경에서 실행 중인지 확인해 주세요.');
-      renderFeaturedCards();
       renderCategoryFilters();
       return;
     }
 
-    renderFeaturedCards();
     renderCategoryFilters();
     applyFiltersAndRender();
-  }
-
-  // =========================================================================
-  // 대표 작품 쇼케이스 (최대 3개)
-  // =========================================================================
-  function renderFeaturedCards() {
-    if (!el.featuredGrid) return;
-    el.featuredGrid.innerHTML = '';
-
-    const featured = Data.getFeaturedArtworks(state.allArtworks, 3);
-    if (featured.length === 0) {
-      const featuredSection = document.getElementById('featuredSection');
-      if (featuredSection) featuredSection.hidden = true;
-      return;
-    }
-
-    featured.forEach((art, idx) => {
-      const card = document.createElement('button');
-      card.type = 'button';
-      card.className = 'featured-card';
-      card.setAttribute('aria-label', `${art.title} 상세 감상 열기`);
-
-      const info = document.createElement('div');
-      info.className = 'featured-info';
-      info.innerHTML = FEATURED_ICONS[idx % FEATURED_ICONS.length];
-
-      const meta = document.createElement('div');
-      meta.className = 'featured-meta';
-
-      const numSpan = document.createElement('span');
-      numSpan.className = 'featured-num';
-      numSpan.textContent = `/ ${String(idx + 1).padStart(2, '0')}`;
-
-      const titleEl = document.createElement('h3');
-      titleEl.className = 'featured-title';
-      titleEl.textContent = art.title;
-
-      meta.appendChild(numSpan);
-      meta.appendChild(titleEl);
-      info.appendChild(meta);
-
-      const media = document.createElement('div');
-      media.className = 'featured-media';
-
-      const img = document.createElement('img');
-      img.src = `./${art.imageUrl}`;
-      img.alt = art.title;
-      // 첫 화면 LCP 이미지는 즉시 로드
-      img.loading = idx === 0 ? 'eager' : 'lazy';
-      img.decoding = 'async';
-
-      media.appendChild(img);
-      card.appendChild(info);
-      card.appendChild(media);
-
-      card.addEventListener('click', () => {
-        openDetail(art.id, { list: state.allArtworks, triggerEl: card });
-      });
-
-      el.featuredGrid.appendChild(card);
-    });
   }
 
   // =========================================================================
@@ -222,7 +151,7 @@
     hideGalleryStatus();
 
     const fragment = document.createDocumentFragment();
-    state.filteredArtworks.forEach(art => {
+    state.filteredArtworks.forEach((art, idx) => {
       const card = document.createElement('button');
       card.type = 'button';
       card.className = 'masonry-card';
@@ -234,7 +163,7 @@
       const img = document.createElement('img');
       img.src = `./${art.imageUrl}`;
       img.alt = art.title;
-      img.loading = 'lazy';
+      img.loading = idx < 4 ? 'eager' : 'lazy';
       img.decoding = 'async';
       img.addEventListener('error', () => {
         console.warn('[BbaedoriApp] 이미지 로드 실패:', art.filename);
