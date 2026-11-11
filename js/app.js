@@ -15,6 +15,28 @@
 
   const HERO_AUTOPLAY_INTERVAL_MS = 5000;
   const HERO_MANUAL_COOLDOWN_MS = 10000;
+  const LIKES_STORAGE_KEY = 'bbaedori_liked_ids_v1';
+  const LIKES_LOCAL_COUNTS_KEY = 'bbaedori_local_like_counts_v1';
+
+  function loadStoredIds() {
+    try {
+      const raw = window.localStorage.getItem(LIKES_STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? new Set(parsed.map(String)) : new Set();
+    } catch (_) {
+      return new Set();
+    }
+  }
+
+  function loadStoredCounts() {
+    try {
+      const raw = window.localStorage.getItem(LIKES_LOCAL_COUNTS_KEY);
+      const parsed = raw ? JSON.parse(raw) : {};
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch (_) {
+      return {};
+    }
+  }
 
   // 상태 관리
   const state = {
@@ -36,7 +58,11 @@
     slideTimerId: null,
     slideState: 'stopped', // 'stopped' | 'playing' | 'paused'
     slideIntervalMs: 5000,
-    lastFocusedElement: null
+    lastFocusedElement: null,
+    likedIds: loadStoredIds(),
+    likeCounts: loadStoredCounts(),
+    likesBackendConfigured: null,
+    pendingLikeIds: new Set()
   };
 
   // DOM 참조
@@ -48,6 +74,7 @@
     heroFeaturedCount: document.getElementById('heroFeaturedCount'),
     heroFeaturedTitle: document.getElementById('heroFeaturedTitle'),
     heroFeaturedDesc: document.getElementById('heroFeaturedDesc'),
+    btnHeroLike: document.getElementById('btnHeroLike'),
     btnHeroDetail: document.getElementById('btnHeroDetail'),
     heroCarouselNav: document.getElementById('heroCarouselNav'),
     btnHeroPrev: document.getElementById('btnHeroPrev'),
@@ -70,6 +97,7 @@
     detailIndex: document.getElementById('detailIndex'),
     detailCategory: document.getElementById('detailCategory'),
     detailTitle: document.getElementById('detailTitle'),
+    btnDetailLike: document.getElementById('btnDetailLike'),
     detailDescription: document.getElementById('detailDescription'),
     detailVideoContainer: document.getElementById('detailVideoContainer'),
 
@@ -118,6 +146,168 @@
 
     renderCategoryFilters();
     applyFiltersAndRender();
+    loadRemoteLikes();
+  }
+
+  // =========================================================================
+  // 작품별 좋아요 카운트 동기화 (/api/likes + localStorage)
+  // =========================================================================
+  function saveLikedIds() {
+    try {
+      window.localStorage.setItem(LIKES_STORAGE_KEY, JSON.stringify(Array.from(state.likedIds)));
+    } catch (_) {}
+  }
+
+  function saveLocalCounts() {
+    try {
+      window.localStorage.setItem(LIKES_LOCAL_COUNTS_KEY, JSON.stringify(state.likeCounts));
+    } catch (_) {}
+  }
+
+  function getLikeCount(artId) {
+    if (!artId) return 0;
+    const n = Number(state.likeCounts[artId]);
+    return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+  }
+
+  function getArtworkTitle(artId) {
+    const found = state.allArtworks.find(item => item.id === artId);
+    return found ? found.title : '작품';
+  }
+
+  function applyLikeButtonState(btn, artId) {
+    if (!btn || !artId) return;
+    const liked = state.likedIds.has(artId);
+    const count = getLikeCount(artId);
+    const heart = btn.querySelector('.like-heart');
+    const countEl = btn.querySelector('.like-count');
+
+    btn.dataset.likeId = artId;
+    btn.classList.toggle('is-liked', liked);
+    btn.setAttribute('aria-pressed', liked ? 'true' : 'false');
+    btn.setAttribute('aria-label', `${getArtworkTitle(artId)} 좋아요 ${liked ? '취소' : '누르기'} (현재 ${count}개)`);
+    if (heart) heart.textContent = liked ? '♥' : '♡';
+    if (countEl) countEl.textContent = count.toLocaleString('ko-KR');
+  }
+
+  function syncLikeUIForArtwork(artId) {
+    if (!artId) return;
+    const heroArt = state.featuredArtworks[state.featuredIndex];
+    if (el.btnHeroLike && heroArt && heroArt.id === artId) {
+      applyLikeButtonState(el.btnHeroLike, artId);
+    }
+    if (el.btnDetailLike && state.currentDetailId === artId) {
+      applyLikeButtonState(el.btnDetailLike, artId);
+    }
+    if (el.masonryGrid) {
+      const chip = el.masonryGrid.querySelector(`.btn-like-chip[data-like-id="${artId}"]`);
+      if (chip) applyLikeButtonState(chip, artId);
+    }
+  }
+
+  function syncAllLikesUI() {
+    const heroArt = state.featuredArtworks[state.featuredIndex];
+    if (el.btnHeroLike && heroArt) {
+      applyLikeButtonState(el.btnHeroLike, heroArt.id);
+    }
+    if (el.btnDetailLike && state.currentDetailId) {
+      applyLikeButtonState(el.btnDetailLike, state.currentDetailId);
+    }
+    if (el.masonryGrid) {
+      el.masonryGrid.querySelectorAll('.btn-like-chip').forEach(chip => {
+        if (chip.dataset.likeId) applyLikeButtonState(chip, chip.dataset.likeId);
+      });
+    }
+  }
+
+  async function loadRemoteLikes() {
+    if (window.location.protocol === 'file:') {
+      state.likesBackendConfigured = false;
+      return;
+    }
+    try {
+      const response = await fetch('./api/likes', { cache: 'no-store' });
+      if (!response.ok) {
+        state.likesBackendConfigured = false;
+        return;
+      }
+      const data = await response.json();
+      if (data && data.ok && data.configured) {
+        state.likesBackendConfigured = true;
+        state.likeCounts = data.counts && typeof data.counts === 'object' ? { ...data.counts } : {};
+        syncAllLikesUI();
+      } else {
+        state.likesBackendConfigured = false;
+      }
+    } catch (_) {
+      state.likesBackendConfigured = false;
+    }
+  }
+
+  async function toggleArtworkLike(artId) {
+    if (!artId || state.pendingLikeIds.has(artId)) return;
+
+    const wasLiked = state.likedIds.has(artId);
+    const delta = wasLiked ? -1 : 1;
+    const prevCount = getLikeCount(artId);
+    const optimisticCount = Math.max(0, prevCount + delta);
+
+    if (wasLiked) {
+      state.likedIds.delete(artId);
+    } else {
+      state.likedIds.add(artId);
+    }
+    state.likeCounts[artId] = optimisticCount;
+    saveLikedIds();
+    syncLikeUIForArtwork(artId);
+
+    if (window.location.protocol === 'file:' || state.likesBackendConfigured === false) {
+      saveLocalCounts();
+      return;
+    }
+
+    state.pendingLikeIds.add(artId);
+    try {
+      const response = await fetch('./api/likes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: artId, delta })
+      });
+      if (!response.ok) {
+        if (response.status === 404) {
+          state.likesBackendConfigured = false;
+          saveLocalCounts();
+          return;
+        }
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const data = await response.json();
+      if (data && data.ok && data.configured && typeof data.count === 'number') {
+        state.likesBackendConfigured = true;
+        state.likeCounts[artId] = Math.max(0, data.count);
+        syncLikeUIForArtwork(artId);
+      } else {
+        state.likesBackendConfigured = false;
+        saveLocalCounts();
+      }
+    } catch (_) {
+      if (state.likesBackendConfigured === true) {
+        // 서버 DB 연결이 활성화된 상태에서 통신 실패 시에만 롤백
+        if (wasLiked) {
+          state.likedIds.add(artId);
+        } else {
+          state.likedIds.delete(artId);
+        }
+        state.likeCounts[artId] = prevCount;
+        saveLikedIds();
+        syncLikeUIForArtwork(artId);
+      } else {
+        state.likesBackendConfigured = false;
+        saveLocalCounts();
+      }
+    } finally {
+      state.pendingLikeIds.delete(artId);
+    }
   }
 
   // =========================================================================
@@ -215,6 +405,7 @@
       el.heroFeaturedCount.textContent = `${String(safeIndex + 1).padStart(2, '0')} / ${String(list.length).padStart(2, '0')}`;
     }
     if (el.heroFeaturedTitle) el.heroFeaturedTitle.textContent = art.title;
+    if (el.btnHeroLike) applyLikeButtonState(el.btnHeroLike, art.id);
     syncHeroDotsActive(safeIndex);
 
     if (el.heroFeaturedImg) {
@@ -402,11 +593,14 @@
     hideGalleryStatus();
 
     const fragment = document.createDocumentFragment();
-    state.filteredArtworks.forEach((art, idx) => {
-      const card = document.createElement('button');
-      card.type = 'button';
+    state.filteredArtworks.forEach(art => {
+      const card = document.createElement('article');
       card.className = 'masonry-card';
-      card.setAttribute('aria-label', `${art.title} 상세 보기`);
+
+      const thumbTrigger = document.createElement('button');
+      thumbTrigger.type = 'button';
+      thumbTrigger.className = 'masonry-thumb-trigger';
+      thumbTrigger.setAttribute('aria-label', `${art.title} 상세 보기`);
 
       const thumbWrap = document.createElement('div');
       thumbWrap.className = 'masonry-thumb-wrap';
@@ -422,28 +616,54 @@
       });
 
       thumbWrap.appendChild(img);
+      thumbTrigger.appendChild(thumbWrap);
 
       const caption = document.createElement('div');
       caption.className = 'masonry-caption';
 
+      const captionMain = document.createElement('div');
+      captionMain.className = 'masonry-caption-main';
+
+      const titleTrigger = document.createElement('button');
+      titleTrigger.type = 'button';
+      titleTrigger.className = 'masonry-title-trigger';
+      titleTrigger.setAttribute('aria-label', `${art.title} 상세 보기`);
+
       const titleEl = document.createElement('h3');
       titleEl.className = 'masonry-title';
       titleEl.textContent = art.title;
+      titleTrigger.appendChild(titleEl);
 
-      caption.appendChild(titleEl);
+      captionMain.appendChild(titleTrigger);
 
       if (art.category && art.category !== '작품') {
         const badge = document.createElement('span');
         badge.className = 'masonry-badge';
         badge.textContent = art.category;
-        caption.appendChild(badge);
+        captionMain.appendChild(badge);
       }
 
-      card.appendChild(thumbWrap);
+      const likeBtn = document.createElement('button');
+      likeBtn.type = 'button';
+      likeBtn.className = 'btn-like btn-like-chip';
+      likeBtn.innerHTML = '<span class="like-heart" aria-hidden="true">♡</span><span class="like-count">0</span>';
+      applyLikeButtonState(likeBtn, art.id);
+      likeBtn.addEventListener('click', event => {
+        event.stopPropagation();
+        toggleArtworkLike(art.id);
+      });
+
+      caption.appendChild(captionMain);
+      caption.appendChild(likeBtn);
+
+      card.appendChild(thumbTrigger);
       card.appendChild(caption);
 
-      card.addEventListener('click', () => {
-        openDetail(art.id, { list: state.filteredArtworks, triggerEl: card });
+      thumbTrigger.addEventListener('click', () => {
+        openDetail(art.id, { list: state.filteredArtworks, triggerEl: thumbTrigger });
+      });
+      titleTrigger.addEventListener('click', () => {
+        openDetail(art.id, { list: state.filteredArtworks, triggerEl: titleTrigger });
       });
 
       fragment.appendChild(card);
@@ -494,6 +714,7 @@
     el.detailIndex.textContent = `/ ${String(artIndex + 1).padStart(2, '0')} · ${list.length}`;
     el.detailCategory.textContent = art.category && art.category !== '작품' ? art.category : '';
     el.detailTitle.textContent = art.title;
+    if (el.btnDetailLike) applyLikeButtonState(el.btnDetailLike, art.id);
     el.detailDescription.innerHTML = '';
 
     // 모달 열기
@@ -843,6 +1064,19 @@
       });
     }
 
+    // 좋아요 버튼 (히어로 대표작 / 상세 보기)
+    if (el.btnHeroLike) {
+      el.btnHeroLike.addEventListener('click', () => {
+        const heroArt = state.featuredArtworks[state.featuredIndex];
+        if (heroArt) toggleArtworkLike(heroArt.id);
+      });
+    }
+    if (el.btnDetailLike) {
+      el.btnDetailLike.addEventListener('click', () => {
+        if (state.currentDetailId) toggleArtworkLike(state.currentDetailId);
+      });
+    }
+
     // 상세 닫기 / 이전 / 다음
     if (el.btnDetailClose) {
       el.btnDetailClose.addEventListener('click', closeDetail);
@@ -936,6 +1170,7 @@
     startSlideshow,
     pauseSlideshow,
     stopSlideshow,
+    toggleArtworkLike,
     getState: () => ({
       total: state.allArtworks.length,
       featuredCount: state.featuredArtworks.length,
@@ -945,7 +1180,8 @@
       filtered: state.filteredArtworks.length,
       currentDetailId: state.currentDetailId,
       slideState: state.slideState,
-      slideIntervalMs: state.slideIntervalMs
+      slideIntervalMs: state.slideIntervalMs,
+      likesBackendConfigured: state.likesBackendConfigured
     })
   };
 

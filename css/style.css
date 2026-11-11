@@ -585,6 +585,57 @@ button {
   word-break: keep-all;
 }
 
+.hero-like-row {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+}
+
+.btn-like {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  line-height: 1;
+  border-radius: var(--radius-pill);
+  transition: background-color var(--transition-base), color var(--transition-base), border-color var(--transition-base), transform 0.2s ease;
+}
+
+.btn-like .like-heart {
+  font-size: 1.02em;
+  line-height: 1;
+  transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1), color 0.2s ease;
+}
+
+.btn-like.is-liked .like-heart {
+  transform: scale(1.16);
+}
+
+.btn-like-hero {
+  min-height: 36px;
+  padding: 6px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #e4e4e4;
+}
+
+.btn-like-hero:hover {
+  border-color: rgba(241, 90, 36, 0.65);
+  background-color: rgba(241, 90, 36, 0.12);
+  color: #ffffff;
+}
+
+.btn-like-hero.is-liked {
+  border-color: rgba(241, 90, 36, 0.78);
+  background-color: rgba(241, 90, 36, 0.22);
+  color: #ffffff;
+}
+
+.btn-like-hero.is-liked .like-heart {
+  color: var(--accent-hover);
+}
+
 .hero-actions {
   display: flex;
   flex-wrap: wrap;
@@ -789,6 +840,16 @@ button {
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
 }
 
+.masonry-thumb-trigger {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
 .masonry-thumb-wrap {
   background-color: var(--bg-matte);
   overflow: hidden;
@@ -806,16 +867,34 @@ button {
 }
 
 .masonry-caption {
-  padding: 13px 16px;
+  padding: 11px 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
+}
+
+.masonry-caption-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.masonry-title-trigger {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
 }
 
 .masonry-title {
   margin: 0;
-  font-size: 0.98rem;
+  font-size: 0.96rem;
   font-weight: 400;
   color: var(--text-dark);
   word-break: keep-all;
@@ -828,6 +907,28 @@ button {
   border-radius: var(--radius-pill);
   background-color: var(--bg-gallery);
   color: var(--text-muted-dark);
+}
+
+.btn-like-chip {
+  flex-shrink: 0;
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px solid var(--border-light);
+  background-color: var(--bg-gallery);
+  color: var(--text-muted-dark);
+  font-size: 0.8rem;
+}
+
+.btn-like-chip:hover {
+  border-color: rgba(200, 66, 18, 0.45);
+  color: var(--accent-on-light);
+  background-color: #fff6f2;
+}
+
+.btn-like-chip.is-liked {
+  border-color: rgba(241, 90, 36, 0.48);
+  background-color: #fff1eb;
+  color: var(--accent-on-light);
 }
 
 /* ==========================================================================
@@ -1186,13 +1287,43 @@ button {
   display: none;
 }
 
+.detail-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
 .detail-title {
-  margin: 0 0 18px;
+  margin: 0;
   font-size: clamp(1.5rem, 2.1vw, 2rem);
   font-weight: 400;
   line-height: 1.3;
   color: var(--text-dark);
   word-break: keep-all;
+}
+
+.btn-like-detail {
+  min-height: 40px;
+  padding: 7px 15px;
+  border: 1px solid var(--border-light);
+  background-color: var(--bg-gallery);
+  color: var(--text-dark);
+  font-size: 0.88rem;
+}
+
+.btn-like-detail:hover {
+  border-color: rgba(200, 66, 18, 0.5);
+  background-color: #fff6f2;
+  color: var(--accent-on-light);
+}
+
+.btn-like-detail.is-liked {
+  border-color: var(--accent);
+  background-color: var(--accent);
+  color: #ffffff;
 }
 
 /* Markdown 작품 설명 */
@@ -1490,7 +1621,18 @@ button {
   }
 
   .masonry-caption {
-    padding: 10px 12px;
+    padding: 9px 10px;
+    gap: 6px;
+  }
+
+  .masonry-title {
+    font-size: 0.88rem;
+  }
+
+  .btn-like-chip {
+    min-height: 30px;
+    padding: 3px 8px;
+    font-size: 0.75rem;
   }
 
   .search-input {
