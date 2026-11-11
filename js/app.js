@@ -93,7 +93,7 @@
   async function loadArtworks() {
     showGalleryStatus('전시 작품을 불러오는 중입니다...');
     try {
-      const response = await fetch('./data/manifest.json');
+      const response = await fetch('./data/manifest.json', { cache: 'no-cache' });
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }

@@ -440,7 +440,8 @@
     "category": "작품",
     "description": "왕거미.md",
     "order": 44,
-    "featured": false,
+    "featured": true,
+    "featuredOrder": 10,
     "width": 1640,
     "height": 2360
   },
@@ -581,7 +582,8 @@
     "category": "작품",
     "description": "코발트블루도리.md",
     "order": 58,
-    "featured": false,
+    "featured": true,
+    "featuredOrder": 9,
     "width": 1640,
     "height": 2360
   },
