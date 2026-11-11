@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>빼도리 온라인 전시회 — 작은 생명과 자연을 그리는 시선</title>
+  <meta name="description" content="직접 창작한 곤충, 동물, 자연 및 다양한 디지털 그림 작품을 감상할 수 있는 빼도리 개인 온라인 미술관입니다.">
+
+  <!-- Google Fonts: 고운돋움 (Gowun Dodum) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap" rel="stylesheet">
+
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+  <!-- =====================================================================
+       SECTION 1: 다크 에디토리얼 메인 & 대표 작품 쇼케이스
+       ===================================================================== -->
+  <div class="editorial-stage" id="homeSection">
+    <!-- 배경 세로 그리드 라인 (레퍼런스 1 반영) -->
+    <div class="stage-grid-lines" aria-hidden="true">
+      <span></span><span></span><span></span><span></span>
+    </div>
+
+    <!-- 상단 내비게이션 -->
+    <header class="site-header">
+      <div class="header-inner">
+        <a href="#homeSection" class="brand-logo" aria-label="빼도리 온라인 전시회 홈">
+          <span class="brand-dots" aria-hidden="true">
+            <i></i><i></i><i></i>
+            <i></i><i></i><i></i>
+            <i></i><i></i><i></i>
+          </span>
+          <span class="brand-text">빼도리</span>
+        </a>
+
+        <nav class="main-nav" aria-label="전시회 주요 메뉴">
+          <a href="#homeSection" class="nav-link active">홈 <span class="nav-dot" aria-hidden="true"></span></a>
+          <a href="#featuredSection" class="nav-link">대표 작품</a>
+          <a href="#gallerySection" class="nav-link">전체 작품</a>
+          <a href="#aboutSection" class="nav-link">전시 소개</a>
+        </nav>
+
+        <div class="header-actions">
+          <a href="#gallerySection" class="btn-header-cta" id="btnHeaderVisit">전시 관람하기</a>
+        </div>
+      </div>
+    </header>
+
+    <!-- 히어로 영역 -->
+    <section class="hero-section" aria-labelledby="heroTitle">
+      <div class="hero-grid">
+        <div class="hero-headline-wrap">
+          <h1 class="hero-title" id="heroTitle">
+            작은 생명과 자연을<br>그리는 시선
+          </h1>
+        </div>
+        <div class="hero-sub-wrap">
+          <p class="hero-subtitle">
+            곤충과 동물, 자연에서 발견한 아름다운 순간을<br>
+            한 점 한 점 그림으로 기록한 빼도리의 온라인 미술관입니다.
+          </p>
+          <a href="#gallerySection" class="hero-explore-link">
+            <span>작품 둘러보기</span>
+            <span class="explore-plus" aria-hidden="true">+</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- 대표 작품 쇼케이스 (featured: true, 최대 3개) -->
+    <section class="featured-section" id="featuredSection" aria-label="대표 작품 쇼케이스">
+      <div class="featured-grid" id="featuredGrid">
+        <!-- JS로 동적 생성 (좌우 분할 세로형 작품 카드) -->
+      </div>
+    </section>
+  </div>
+
+  <!-- =====================================================================
+       SECTION 2: 전체 작품 갤러리 (Masonry)
+       ===================================================================== -->
+  <main class="gallery-section" id="gallerySection" aria-labelledby="galleryHeading">
+    <div class="gallery-container">
+      <div class="gallery-header">
+        <div class="gallery-title-block">
+          <span class="gallery-kicker">EXHIBITION ARCHIVE</span>
+          <h2 class="gallery-heading" id="galleryHeading">전체 작품</h2>
+          <p class="gallery-count" id="galleryCountText">총 0점 전시 중</p>
+        </div>
+
+        <div class="gallery-controls">
+          <!-- 카테고리 필터 (manifest에 다중 카테고리가 있을 때 자동 확장) -->
+          <div class="category-filters" id="categoryFilters" role="tablist" aria-label="작품 카테고리 필터"></div>
+
+          <!-- 작품명 검색 -->
+          <div class="search-box">
+            <label for="artworkSearchInput" class="sr-only">작품명 검색</label>
+            <input
+              type="search"
+              id="artworkSearchInput"
+              class="search-input"
+              placeholder="작품명 검색..."
+              autocomplete="off"
+            >
+          </div>
+        </div>
+      </div>
+
+      <!-- 상태 안내 (로딩 / 오류 / 결과 없음) -->
+      <div class="gallery-status" id="galleryStatus" role="status" aria-live="polite" hidden></div>
+
+      <!-- Masonry 그리드 -->
+      <div class="masonry-grid" id="masonryGrid"></div>
+    </div>
+  </main>
+
+  <!-- =====================================================================
+       SECTION 3: 전시 소개 & 푸터
+       ===================================================================== -->
+  <footer class="about-footer" id="aboutSection">
+    <div class="about-inner">
+      <div class="about-col">
+        <span class="about-kicker">ABOUT EXHIBITION</span>
+        <h2 class="about-title">빼도리 온라인 전시회</h2>
+        <p class="about-desc">
+          자연 속 작은 생명들의 다채로운 색감과 이야기를 디지털 드로잉으로 담아낸 개인 온라인 전시 공간입니다.
+          작품을 클릭하면 상세한 작품 이야기와 제작 과정을 담은 영상을 함께 감상하실 수 있습니다.
+        </p>
+      </div>
+      <div class="about-meta">
+        <p class="about-copy">© 2026 빼도리 (Bbaedori). All rights reserved.</p>
+        <p class="about-sub">Static Digital Art Gallery · Hosted on GitHub Pages</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- 우측 하단 코랄 TOP 플로팅 버튼 (레퍼런스 1 반영) -->
+  <button type="button" class="btn-scroll-top" id="btnScrollTop" aria-label="맨 위로 이동" title="맨 위로">
+    ↑
+  </button>
+
+  <!-- =====================================================================
+       SECTION 4: 작품 상세 감상 화면 (레퍼런스 2 화이트 뮤지엄 뷰)
+       ===================================================================== -->
+  <div
+    class="detail-overlay"
+    id="detailOverlay"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="detailTitle"
+    hidden
+  >
+    <!-- 상세 상단 미니멀 헤더 -->
+    <header class="detail-header">
+      <div class="detail-header-spacer" aria-hidden="true"></div>
+      <div class="detail-brand">빼 도 리 &nbsp; 온 라 인 &nbsp; 전 시 회</div>
+      <button
+        type="button"
+        class="btn-detail-close"
+        id="btnDetailClose"
+        aria-label="상세 화면 닫기"
+        title="닫기 (ESC)"
+      >
+        <span class="close-line"></span>
+        <span class="close-line"></span>
+      </button>
+    </header>
+
+    <!-- 상세 본문 (PC 2단 / 모바일 상하) -->
+    <div class="detail-body" id="detailBody">
+      <!-- 왼쪽: 웜 베이지 매트 액자 + 작품 이미지 -->
+      <div class="detail-image-stage" id="detailSwipeArea">
+        <div class="detail-matte-frame">
+          <img
+            id="detailImage"
+            class="detail-image"
+            src=""
+            alt=""
+          >
+        </div>
+      </div>
+
+      <!-- 오른쪽: 작품 정보 + 설명 + 선택적 유튜브 + 컨트롤 -->
+      <div class="detail-info-panel">
+        <div class="detail-info-scroll">
+          <div class="detail-meta-row">
+            <span class="detail-index" id="detailIndex">/ 01</span>
+            <span class="detail-category" id="detailCategory"></span>
+          </div>
+
+          <h2 class="detail-title" id="detailTitle">작품명</h2>
+
+          <!-- 작품 설명 (Markdown 렌더링 결과) -->
+          <div class="detail-description" id="detailDescription"></div>
+
+          <!-- 관련 유튜브 영상 (유효한 URL이 있을 때만 JS가 동적 생성) -->
+          <div id="detailVideoContainer"></div>
+        </div>
+
+        <!-- 하단 네비게이션 & 슬라이드 컨트롤 -->
+        <div class="detail-controls">
+          <div class="detail-nav-buttons">
+            <button type="button" class="btn-pill" id="btnPrevArt" aria-label="이전 작품">← 이전 작품</button>
+            <button type="button" class="btn-pill" id="btnNextArt" aria-label="다음 작품">다음 작품 →</button>
+          </div>
+
+          <div class="detail-slide-bar" aria-label="자동 슬라이드 제어">
+            <div class="slide-buttons">
+              <button type="button" class="btn-pill btn-pill-accent" id="btnSlideToggle">▶ 슬라이드</button>
+              <button type="button" class="btn-pill" id="btnSlideStop" hidden>■ 종료</button>
+            </div>
+            <label for="slideIntervalSelect" class="sr-only">슬라이드 간격</label>
+            <select id="slideIntervalSelect" class="slide-select" title="슬라이드 간격 선택">
+              <option value="3000">3초</option>
+              <option value="5000" selected>5초</option>
+              <option value="10000">10초</option>
+              <option value="15000">15초</option>
+              <option value="30000">30초</option>
+            </select>
+            <span class="slide-status" id="slideStatus" aria-live="polite"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 순수 바닐라 JS 모듈 -->
+  <script defer src="./js/data-parser.js"></script>
+  <script defer src="./js/youtube.js"></script>
+  <script defer src="./js/app.js"></script>
+</body>
+</html>

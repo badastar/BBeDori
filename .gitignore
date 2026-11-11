@@ -1,0 +1,23 @@
+# 보안 및 인증 정보 (절대 업로드 금지)
+*service-account*.json
+*.pem
+*.key
+*.env
+*.secret
+*.log
+
+# 압축 및 백업 파일
+*.zip
+*.tar
+*.gz
+*.rar
+*.7z
+
+# 구버전 서버/DB 파일 차단
+config/
+*.php
+*.sql
+
+# 운영체제 임시 파일
+.DS_Store
+Thumbs.db
