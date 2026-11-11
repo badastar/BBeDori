@@ -743,10 +743,57 @@ button {
   }
 }
 
+.gallery-count-row {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
 .gallery-count {
-  margin: 6px 0 0;
+  margin: 0;
   font-size: 0.92rem;
   color: var(--text-muted-dark);
+}
+
+.gallery-visitors {
+  font-size: 0.8rem;
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  background-color: var(--bg-white);
+  border: 1px solid var(--border-light);
+  color: var(--text-muted-dark);
+}
+
+.sort-toggle-group {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-light);
+  background-color: var(--bg-white);
+  gap: 2px;
+}
+
+.btn-sort {
+  min-height: 36px;
+  padding: 6px 14px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-muted-dark);
+  font-size: 0.86rem;
+  transition: background-color var(--transition-base), color var(--transition-base);
+}
+
+.btn-sort:hover {
+  color: var(--text-dark);
+}
+
+.btn-sort.active {
+  background-color: var(--text-dark);
+  color: var(--bg-white);
 }
 
 .gallery-controls {
@@ -929,6 +976,353 @@ button {
   border-color: rgba(241, 90, 36, 0.48);
   background-color: #fff1eb;
   color: var(--accent-on-light);
+}
+
+.masonry-thumb-wrap {
+  position: relative;
+}
+
+.masonry-top-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  background-color: rgba(23, 23, 23, 0.84);
+  color: #ffffff;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+}
+
+.masonry-top-badge.is-top1 {
+  background-color: var(--accent);
+}
+
+/* ==========================================================================
+   SECTION 3: 관람객 소통공간 (신작 주제 투표 & 전시장 방명록)
+   ========================================================================== */
+
+.community-section {
+  background-color: var(--bg-white);
+  color: var(--text-dark);
+  padding: 64px var(--side-gutter) 76px;
+  border-top: 1px solid var(--border-light);
+}
+
+.community-container {
+  width: 100%;
+}
+
+.community-header {
+  margin-bottom: 28px;
+}
+
+.community-subtitle {
+  margin: 8px 0 0;
+  font-size: 0.96rem;
+  color: var(--text-muted-dark);
+  word-break: keep-all;
+}
+
+.community-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.community-card {
+  background-color: var(--bg-gallery);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-card);
+  padding: 24px;
+}
+
+.community-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.community-card-title {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 400;
+  color: var(--text-dark);
+}
+
+.community-card-desc {
+  margin: 0 0 18px;
+  font-size: 0.88rem;
+  color: var(--text-muted-dark);
+  word-break: keep-all;
+}
+
+.community-meta-pill {
+  font-size: 0.78rem;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background-color: var(--bg-white);
+  border: 1px solid var(--border-light);
+  color: var(--text-muted-dark);
+}
+
+/* 주제 투표 */
+.poll-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.poll-option {
+  position: relative;
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border-light);
+  background-color: var(--bg-white);
+  color: var(--text-dark);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  overflow: hidden;
+  text-align: left;
+  transition: border-color var(--transition-base), transform 0.2s ease;
+}
+
+.poll-option:hover {
+  border-color: rgba(241, 90, 36, 0.65);
+}
+
+.poll-option.is-voted {
+  border-color: var(--accent);
+}
+
+.poll-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0%;
+  background-color: rgba(241, 90, 36, 0.11);
+  transition: width 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+
+.poll-option.is-voted .poll-bar {
+  background-color: rgba(241, 90, 36, 0.18);
+}
+
+.poll-label,
+.poll-stat {
+  position: relative;
+  z-index: 1;
+}
+
+.poll-label {
+  font-size: 0.94rem;
+}
+
+.poll-stat {
+  flex-shrink: 0;
+  font-size: 0.82rem;
+  color: var(--text-muted-dark);
+}
+
+.poll-option.is-voted .poll-stat {
+  color: var(--accent-on-light);
+}
+
+/* 전시장 방명록 */
+.guestbook-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-admin-toggle {
+  min-height: 28px;
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-light);
+  background-color: var(--bg-white);
+  color: var(--text-muted-dark);
+  font-size: 0.74rem;
+}
+
+.btn-admin-toggle.is-active {
+  border-color: var(--accent);
+  color: var(--accent-on-light);
+  background-color: #fff1eb;
+}
+
+.guestbook-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0 16px;
+}
+
+.gb-form-row,
+.gb-form-submit-row {
+  display: flex;
+  gap: 8px;
+}
+
+.gb-input,
+.gb-select {
+  min-height: 40px;
+  padding: 7px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-light);
+  background-color: var(--bg-white);
+  color: var(--text-dark);
+  font-size: 0.9rem;
+}
+
+.gb-input-author {
+  width: 38%;
+  min-width: 120px;
+}
+
+.gb-select {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.gb-input-msg {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.gb-input:focus,
+.gb-select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.btn-gb-submit {
+  flex-shrink: 0;
+  min-height: 40px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 10px;
+  background-color: var(--accent);
+  color: #ffffff;
+  font-size: 0.9rem;
+  transition: background-color var(--transition-base);
+}
+
+.btn-gb-submit:hover {
+  background-color: var(--accent-hover);
+}
+
+.gb-status {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--accent-on-light);
+  min-height: 1.2em;
+}
+
+.gb-status:empty {
+  display: none;
+}
+
+.guestbook-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.guestbook-item {
+  background-color: var(--bg-white);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.guestbook-item-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 5px;
+}
+
+.guestbook-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.guestbook-author {
+  font-size: 0.86rem;
+  color: var(--text-dark);
+}
+
+.guestbook-art-tag {
+  font-size: 0.74rem;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background-color: #fff1eb;
+  color: var(--accent-on-light);
+}
+
+.guestbook-item-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.guestbook-date {
+  font-size: 0.74rem;
+  color: var(--text-muted-dark);
+}
+
+.btn-gb-delete {
+  border: 1px solid var(--border-light);
+  background-color: var(--bg-gallery);
+  color: var(--text-muted-dark);
+  border-radius: 6px;
+  padding: 2px 7px;
+  font-size: 0.74rem;
+}
+
+.btn-gb-delete:hover {
+  border-color: var(--accent);
+  color: var(--accent-on-light);
+}
+
+.guestbook-msg {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: #333333;
+  word-break: break-word;
+}
+
+.guestbook-empty {
+  padding: 24px 12px;
+  text-align: center;
+  color: var(--text-muted-dark);
+  font-size: 0.88rem;
+  background-color: var(--bg-white);
+  border-radius: 12px;
+  border: 1px dashed var(--border-light);
 }
 
 /* ==========================================================================
@@ -1287,6 +1681,45 @@ button {
   display: none;
 }
 
+.detail-views {
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: var(--text-muted-dark);
+}
+
+.detail-reactions-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.btn-reaction {
+  min-height: 34px;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-light);
+  background-color: var(--bg-white);
+  color: var(--text-muted-dark);
+  font-size: 0.82rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: border-color var(--transition-base), background-color var(--transition-base), color var(--transition-base);
+}
+
+.btn-reaction:hover {
+  border-color: rgba(241, 90, 36, 0.55);
+  color: var(--text-dark);
+}
+
+.btn-reaction.is-active {
+  border-color: rgba(241, 90, 36, 0.55);
+  background-color: #fff1eb;
+  color: var(--accent-on-light);
+}
+
 .detail-title-row {
   display: flex;
   flex-wrap: wrap;
@@ -1428,6 +1861,111 @@ button {
   height: 100%;
   border: 0;
   display: block;
+}
+
+/* 상세 화면 작품별 한줄 감상평 */
+.detail-comments-section {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-light);
+}
+
+.detail-comments-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.detail-comments-title {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 400;
+  color: var(--text-dark);
+}
+
+.detail-comments-count {
+  font-size: 0.78rem;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background-color: var(--bg-matte);
+  color: var(--text-muted-dark);
+}
+
+.detail-comment-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.detail-comment-author {
+  width: 96px;
+  min-height: 36px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-light);
+  font-size: 0.84rem;
+}
+
+.detail-comment-input {
+  flex: 1 1 160px;
+  min-width: 0;
+  min-height: 36px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-light);
+  font-size: 0.84rem;
+}
+
+.btn-detail-comment-submit {
+  min-height: 36px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 8px;
+  background-color: var(--text-dark);
+  color: #ffffff;
+  font-size: 0.82rem;
+}
+
+.btn-detail-comment-submit:hover {
+  background-color: var(--accent);
+}
+
+.detail-comment-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detail-comment-item {
+  background-color: var(--bg-gallery);
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 0.86rem;
+}
+
+.detail-comment-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 3px;
+  font-size: 0.76rem;
+  color: var(--text-muted-dark);
+}
+
+.detail-comment-author-name {
+  color: var(--text-dark);
+}
+
+.detail-comment-empty {
+  margin: 0;
+  font-size: 0.84rem;
+  color: var(--text-muted-dark);
 }
 
 /* 좌측 하단 슬라이드 컨트롤 */
@@ -1572,6 +2110,10 @@ button {
     overflow-y: visible;
     padding-right: 0;
   }
+
+  .community-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 760px) {
@@ -1636,6 +2178,23 @@ button {
   }
 
   .search-input {
+    width: 100%;
+  }
+
+  .community-section {
+    padding: 46px 4% 56px;
+  }
+
+  .community-card {
+    padding: 18px;
+  }
+
+  .gb-form-row,
+  .gb-form-submit-row {
+    flex-direction: column;
+  }
+
+  .gb-input-author {
     width: 100%;
   }
 

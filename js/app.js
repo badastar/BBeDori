@@ -17,10 +17,16 @@
   const HERO_MANUAL_COOLDOWN_MS = 10000;
   const LIKES_STORAGE_KEY = 'bbaedori_liked_ids_v1';
   const LIKES_LOCAL_COUNTS_KEY = 'bbaedori_local_like_counts_v1';
+  const REACTIONS_STORAGE_KEY = 'bbaedori_reactions_v1';
+  const POLL_STORAGE_KEY = 'bbaedori_poll_vote_v1';
+  const GB_CLIENT_TOKEN_KEY = 'bbaedori_gb_client_token_v1';
+  const GB_OWN_IDS_KEY = 'bbaedori_gb_own_ids_v1';
+  const VISIT_SESSION_KEY = 'bbaedori_visit_counted_v1';
+  const POLL_OPTION_KEYS = ['beetle', 'butterfly', 'reptile', 'botanical'];
 
-  function loadStoredIds() {
+  function loadStoredIds(key = LIKES_STORAGE_KEY) {
     try {
-      const raw = window.localStorage.getItem(LIKES_STORAGE_KEY);
+      const raw = window.localStorage.getItem(key);
       const parsed = raw ? JSON.parse(raw) : [];
       return Array.isArray(parsed) ? new Set(parsed.map(String)) : new Set();
     } catch (_) {
@@ -28,13 +34,34 @@
     }
   }
 
-  function loadStoredCounts() {
+  function loadStoredObject(key) {
     try {
-      const raw = window.localStorage.getItem(LIKES_LOCAL_COUNTS_KEY);
+      const raw = window.localStorage.getItem(key);
       const parsed = raw ? JSON.parse(raw) : {};
       return parsed && typeof parsed === 'object' ? parsed : {};
     } catch (_) {
       return {};
+    }
+  }
+
+  function loadStoredString(key) {
+    try {
+      return window.localStorage.getItem(key) || '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function getOrCreateClientToken() {
+    try {
+      let token = window.localStorage.getItem(GB_CLIENT_TOKEN_KEY);
+      if (!token) {
+        token = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+        window.localStorage.setItem(GB_CLIENT_TOKEN_KEY, token);
+      }
+      return token;
+    } catch (_) {
+      return '';
     }
   }
 
@@ -51,6 +78,7 @@
     filteredArtworks: [],
     activeListForDetail: [],
     selectedCategory: '전체',
+    sortMode: 'alpha', // 'alpha' | 'popular'
     searchQuery: '',
     currentDetailId: null,
     detailRequestToken: 0,
@@ -59,8 +87,21 @@
     slideState: 'stopped', // 'stopped' | 'playing' | 'paused'
     slideIntervalMs: 5000,
     lastFocusedElement: null,
-    likedIds: loadStoredIds(),
-    likeCounts: loadStoredCounts(),
+    likedIds: loadStoredIds(LIKES_STORAGE_KEY),
+    likeCounts: loadStoredObject(LIKES_LOCAL_COUNTS_KEY),
+    viewCounts: {},
+    visitCount: 0,
+    viewedSessionIds: new Set(),
+    reactionChoices: loadStoredObject(REACTIONS_STORAGE_KEY),
+    reactionCounts: {},
+    pendingReactions: new Set(),
+    pollVote: loadStoredString(POLL_STORAGE_KEY),
+    pollCounts: {},
+    pendingPollVote: false,
+    guestbookEntries: [],
+    ownCommentIds: loadStoredIds(GB_OWN_IDS_KEY),
+    gbClientToken: getOrCreateClientToken(),
+    adminPassword: '',
     likesBackendConfigured: null,
     pendingLikeIds: new Set()
   };
@@ -84,11 +125,27 @@
     gallerySection: document.getElementById('gallerySection'),
     galleryHeading: document.getElementById('galleryHeading'),
     categoryFilters: document.getElementById('categoryFilters'),
+    btnSortAlpha: document.getElementById('btnSortAlpha'),
+    btnSortPopular: document.getElementById('btnSortPopular'),
     searchInput: document.getElementById('artworkSearchInput'),
     galleryCountText: document.getElementById('galleryCountText'),
+    galleryVisitText: document.getElementById('galleryVisitText'),
     galleryStatus: document.getElementById('galleryStatus'),
     masonryGrid: document.getElementById('masonryGrid'),
     btnScrollTop: document.getElementById('btnScrollTop'),
+
+    pollOptions: document.getElementById('pollOptions'),
+    pollTotalText: document.getElementById('pollTotalText'),
+    guestbookForm: document.getElementById('guestbookForm'),
+    gbAuthorInput: document.getElementById('gbAuthorInput'),
+    gbArtworkSelect: document.getElementById('gbArtworkSelect'),
+    gbWebsiteTrap: document.getElementById('gbWebsiteTrap'),
+    gbMessageInput: document.getElementById('gbMessageInput'),
+    btnGbSubmit: document.getElementById('btnGbSubmit'),
+    gbStatus: document.getElementById('gbStatus'),
+    gbCountText: document.getElementById('gbCountText'),
+    btnAdminToggle: document.getElementById('btnAdminToggle'),
+    guestbookList: document.getElementById('guestbookList'),
 
     detailOverlay: document.getElementById('detailOverlay'),
     btnDetailClose: document.getElementById('btnDetailClose'),
@@ -96,10 +153,21 @@
     detailImage: document.getElementById('detailImage'),
     detailIndex: document.getElementById('detailIndex'),
     detailCategory: document.getElementById('detailCategory'),
+    detailViewCount: document.getElementById('detailViewCount'),
     detailTitle: document.getElementById('detailTitle'),
     btnDetailLike: document.getElementById('btnDetailLike'),
+    btnReactCute: document.getElementById('btnReactCute'),
+    btnReactDetail: document.getElementById('btnReactDetail'),
+    reactCuteCount: document.getElementById('reactCuteCount'),
+    reactDetailCount: document.getElementById('reactDetailCount'),
     detailDescription: document.getElementById('detailDescription'),
     detailVideoContainer: document.getElementById('detailVideoContainer'),
+    detailCommentCount: document.getElementById('detailCommentCount'),
+    detailCommentForm: document.getElementById('detailCommentForm'),
+    detailCommentAuthor: document.getElementById('detailCommentAuthor'),
+    detailCommentInput: document.getElementById('detailCommentInput'),
+    detailCommentStatus: document.getElementById('detailCommentStatus'),
+    detailCommentList: document.getElementById('detailCommentList'),
 
     btnPrevArt: document.getElementById('btnPrevArt'),
     btnNextArt: document.getElementById('btnNextArt'),
@@ -145,28 +213,40 @@
     startHeroAutoplay();
 
     renderCategoryFilters();
+    populateGuestbookArtworkOptions();
     applyFiltersAndRender();
-    loadRemoteLikes();
+    renderPollUI();
+    renderGuestbookList();
+    loadRemoteEngagement();
+    loadGuestbookEntries();
   }
 
   // =========================================================================
-  // 작품별 좋아요 카운트 동기화 (/api/likes + localStorage)
+  // 작품별 좋아요 · 조회수 · 관람객 · 반응 · 투표 · 방명록 연동
   // =========================================================================
-  function saveLikedIds() {
+  function saveJsonStorage(key, value) {
     try {
-      window.localStorage.setItem(LIKES_STORAGE_KEY, JSON.stringify(Array.from(state.likedIds)));
+      window.localStorage.setItem(key, JSON.stringify(value));
     } catch (_) {}
+  }
+
+  function saveLikedIds() {
+    saveJsonStorage(LIKES_STORAGE_KEY, Array.from(state.likedIds));
   }
 
   function saveLocalCounts() {
-    try {
-      window.localStorage.setItem(LIKES_LOCAL_COUNTS_KEY, JSON.stringify(state.likeCounts));
-    } catch (_) {}
+    saveJsonStorage(LIKES_LOCAL_COUNTS_KEY, state.likeCounts);
   }
 
   function getLikeCount(artId) {
     if (!artId) return 0;
     const n = Number(state.likeCounts[artId]);
+    return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+  }
+
+  function getViewCount(artId) {
+    if (!artId) return 0;
+    const n = Number(state.viewCounts[artId]);
     return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
   }
 
@@ -220,11 +300,83 @@
     }
   }
 
-  async function loadRemoteLikes() {
-    if (window.location.protocol === 'file:') {
-      state.likesBackendConfigured = false;
-      return;
+  function updateVisitorBadge() {
+    if (!el.galleryVisitText) return;
+    if (state.visitCount > 0) {
+      el.galleryVisitText.textContent = `누적 관람 ${state.visitCount.toLocaleString('ko-KR')}회`;
+      el.galleryVisitText.hidden = false;
+    } else {
+      el.galleryVisitText.hidden = true;
     }
+  }
+
+  function updateDetailMetaEngagement(artId) {
+    if (!artId) return;
+    if (el.detailViewCount) {
+      el.detailViewCount.textContent = `조회 ${getViewCount(artId).toLocaleString('ko-KR')}`;
+    }
+    const cuteKey = `${artId}:cute`;
+    const detailKey = `${artId}:detail`;
+    const cuteActive = Boolean(state.reactionChoices[cuteKey]);
+    const detailActive = Boolean(state.reactionChoices[detailKey]);
+    if (el.btnReactCute) {
+      el.btnReactCute.classList.toggle('is-active', cuteActive);
+      el.btnReactCute.setAttribute('aria-pressed', cuteActive ? 'true' : 'false');
+    }
+    if (el.btnReactDetail) {
+      el.btnReactDetail.classList.toggle('is-active', detailActive);
+      el.btnReactDetail.setAttribute('aria-pressed', detailActive ? 'true' : 'false');
+    }
+    if (el.reactCuteCount) {
+      el.reactCuteCount.textContent = (Number(state.reactionCounts[cuteKey]) || 0).toLocaleString('ko-KR');
+    }
+    if (el.reactDetailCount) {
+      el.reactDetailCount.textContent = (Number(state.reactionCounts[detailKey]) || 0).toLocaleString('ko-KR');
+    }
+  }
+
+  async function recordVisitIfNeeded() {
+    if (window.location.protocol === 'file:' || state.likesBackendConfigured !== true) return;
+    try {
+      if (window.sessionStorage.getItem(VISIT_SESSION_KEY)) return;
+      window.sessionStorage.setItem(VISIT_SESSION_KEY, '1');
+      const res = await fetch('./api/engagement', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'visit' })
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data && data.ok && typeof data.visits === 'number') {
+        state.visitCount = data.visits;
+        updateVisitorBadge();
+      }
+    } catch (_) {}
+  }
+
+  async function trackArtworkView(artId) {
+    if (!artId || state.viewedSessionIds.has(artId)) return;
+    state.viewedSessionIds.add(artId);
+    state.viewCounts[artId] = getViewCount(artId) + 1;
+    if (state.currentDetailId === artId) updateDetailMetaEngagement(artId);
+
+    if (window.location.protocol === 'file:' || state.likesBackendConfigured === false) return;
+    try {
+      const res = await fetch('./api/engagement', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'view', id: artId })
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data && data.ok && data.configured && typeof data.count === 'number') {
+        state.viewCounts[artId] = Math.max(0, data.count);
+        if (state.currentDetailId === artId) updateDetailMetaEngagement(artId);
+      }
+    } catch (_) {}
+  }
+
+  async function loadRemoteLikesFallback() {
     try {
       const response = await fetch('./api/likes', { cache: 'no-store' });
       if (!response.ok) {
@@ -236,6 +388,45 @@
         state.likesBackendConfigured = true;
         state.likeCounts = data.counts && typeof data.counts === 'object' ? { ...data.counts } : {};
         syncAllLikesUI();
+        if (state.sortMode === 'popular') applyFiltersAndRender();
+      } else {
+        state.likesBackendConfigured = false;
+      }
+    } catch (_) {
+      state.likesBackendConfigured = false;
+    }
+  }
+
+  async function loadRemoteEngagement() {
+    if (window.location.protocol === 'file:') {
+      state.likesBackendConfigured = false;
+      return;
+    }
+    try {
+      const response = await fetch('./api/engagement', { cache: 'no-store' });
+      if (!response.ok) {
+        if (response.status === 404) {
+          await loadRemoteLikesFallback();
+          return;
+        }
+        state.likesBackendConfigured = false;
+        return;
+      }
+      const data = await response.json();
+      if (data && data.ok && data.configured) {
+        state.likesBackendConfigured = true;
+        state.likeCounts = data.likes && typeof data.likes === 'object' ? { ...data.likes } : {};
+        state.viewCounts = data.views && typeof data.views === 'object' ? { ...data.views } : {};
+        state.visitCount = Number(data.visits) || 0;
+        state.reactionCounts = data.reactions && typeof data.reactions === 'object' ? { ...data.reactions } : {};
+        state.pollCounts = data.poll && typeof data.poll === 'object' ? { ...data.poll } : {};
+
+        syncAllLikesUI();
+        updateVisitorBadge();
+        renderPollUI();
+        if (state.currentDetailId) updateDetailMetaEngagement(state.currentDetailId);
+        if (state.sortMode === 'popular') applyFiltersAndRender();
+        recordVisitIfNeeded();
       } else {
         state.likesBackendConfigured = false;
       }
@@ -292,7 +483,6 @@
       }
     } catch (_) {
       if (state.likesBackendConfigured === true) {
-        // 서버 DB 연결이 활성화된 상태에서 통신 실패 시에만 롤백
         if (wasLiked) {
           state.likedIds.add(artId);
         } else {
@@ -307,6 +497,415 @@
       }
     } finally {
       state.pendingLikeIds.delete(artId);
+    }
+  }
+
+  async function toggleArtworkReaction(artId, reaction) {
+    if (!artId || !reaction) return;
+    const field = `${artId}:${reaction}`;
+    if (state.pendingReactions.has(field)) return;
+
+    const wasActive = Boolean(state.reactionChoices[field]);
+    const delta = wasActive ? -1 : 1;
+    const prevCount = Number(state.reactionCounts[field]) || 0;
+    const nextCount = Math.max(0, prevCount + delta);
+
+    if (wasActive) {
+      delete state.reactionChoices[field];
+    } else {
+      state.reactionChoices[field] = true;
+    }
+    state.reactionCounts[field] = nextCount;
+    saveJsonStorage(REACTIONS_STORAGE_KEY, state.reactionChoices);
+    if (state.currentDetailId === artId) updateDetailMetaEngagement(artId);
+
+    if (window.location.protocol === 'file:' || state.likesBackendConfigured === false) return;
+
+    state.pendingReactions.add(field);
+    try {
+      const res = await fetch('./api/engagement', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reaction', id: artId, reaction, delta })
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data && data.ok && data.configured && typeof data.count === 'number') {
+        state.reactionCounts[field] = Math.max(0, data.count);
+        if (state.currentDetailId === artId) updateDetailMetaEngagement(artId);
+      }
+    } catch (_) {
+      // ignore network error
+    } finally {
+      state.pendingReactions.delete(field);
+    }
+  }
+
+  function renderPollUI() {
+    if (!el.pollOptions) return;
+    const total = POLL_OPTION_KEYS.reduce((sum, key) => sum + (Number(state.pollCounts[key]) || 0), 0);
+    if (el.pollTotalText) {
+      el.pollTotalText.textContent = `총 ${total.toLocaleString('ko-KR')}표`;
+    }
+
+    el.pollOptions.querySelectorAll('.poll-option').forEach(btn => {
+      const opt = btn.dataset.pollOption;
+      const count = Number(state.pollCounts[opt]) || 0;
+      const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+      const isVoted = state.pollVote === opt;
+      btn.classList.toggle('is-voted', isVoted);
+      btn.setAttribute('aria-pressed', isVoted ? 'true' : 'false');
+
+      const bar = btn.querySelector('.poll-bar');
+      const stat = btn.querySelector('.poll-stat');
+      if (bar) bar.style.width = `${pct}%`;
+      if (stat) stat.textContent = `${count.toLocaleString('ko-KR')}표 (${pct}%)`;
+    });
+  }
+
+  async function castPollVote(option) {
+    if (!option || !POLL_OPTION_KEYS.includes(option) || state.pendingPollVote) return;
+    if (state.pollVote === option) return;
+
+    const prevOption = state.pollVote;
+    state.pollVote = option;
+    state.pollCounts[option] = (Number(state.pollCounts[option]) || 0) + 1;
+    if (prevOption && POLL_OPTION_KEYS.includes(prevOption)) {
+      state.pollCounts[prevOption] = Math.max(0, (Number(state.pollCounts[prevOption]) || 0) - 1);
+    }
+    try {
+      window.localStorage.setItem(POLL_STORAGE_KEY, option);
+    } catch (_) {}
+    renderPollUI();
+
+    if (window.location.protocol === 'file:' || state.likesBackendConfigured === false) return;
+
+    state.pendingPollVote = true;
+    try {
+      const res = await fetch('./api/engagement', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'vote', option, prevOption })
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data && data.ok && data.configured && data.poll) {
+        state.pollCounts = { ...data.poll };
+        renderPollUI();
+      }
+    } catch (_) {
+      // ignore
+    } finally {
+      state.pendingPollVote = false;
+    }
+  }
+
+  function populateGuestbookArtworkOptions() {
+    if (!el.gbArtworkSelect) return;
+    while (el.gbArtworkSelect.options.length > 1) {
+      el.gbArtworkSelect.remove(1);
+    }
+    state.allArtworks.forEach(art => {
+      const opt = document.createElement('option');
+      opt.value = art.id;
+      opt.textContent = `작품: ${art.title}`;
+      el.gbArtworkSelect.appendChild(opt);
+    });
+  }
+
+  function formatRelativeDate(isoStr) {
+    if (!isoStr) return '';
+    try {
+      const date = new Date(isoStr);
+      if (Number.isNaN(date.getTime())) return '';
+      const diffSec = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
+      if (diffSec < 60) return '방금 전';
+      if (diffSec < 3600) return `${Math.floor(diffSec / 60)}분 전`;
+      if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}시간 전`;
+      const m = date.getMonth() + 1;
+      const d = date.getDate();
+      return `${date.getFullYear()}.${String(m).padStart(2, '0')}.${String(d).padStart(2, '0')}`;
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function canDeleteEntry(entry) {
+    return Boolean(state.adminPassword || (entry && state.ownCommentIds.has(entry.id)));
+  }
+
+  function renderGuestbookList() {
+    if (el.gbCountText) {
+      el.gbCountText.textContent = `${state.guestbookEntries.length.toLocaleString('ko-KR')}개의 이야기`;
+    }
+    if (!el.guestbookList) return;
+    el.guestbookList.innerHTML = '';
+
+    if (state.guestbookEntries.length === 0) {
+      const empty = document.createElement('li');
+      empty.className = 'guestbook-empty';
+      empty.textContent = '아직 남겨진 방명록이 없습니다. 첫 번째 감상평을 남겨 보세요!';
+      el.guestbookList.appendChild(empty);
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    state.guestbookEntries.slice(0, 50).forEach(entry => {
+      const li = document.createElement('li');
+      li.className = 'guestbook-item';
+
+      const head = document.createElement('div');
+      head.className = 'guestbook-item-head';
+
+      const meta = document.createElement('div');
+      meta.className = 'guestbook-item-meta';
+
+      const author = document.createElement('strong');
+      author.className = 'guestbook-author';
+      author.textContent = entry.author || '익명의 관람객';
+      meta.appendChild(author);
+
+      if (entry.artworkTitle) {
+        const tag = document.createElement('span');
+        tag.className = 'guestbook-art-tag';
+        tag.textContent = entry.artworkTitle;
+        meta.appendChild(tag);
+      }
+
+      const right = document.createElement('div');
+      right.className = 'guestbook-item-right';
+
+      const date = document.createElement('span');
+      date.className = 'guestbook-date';
+      date.textContent = formatRelativeDate(entry.createdAt);
+      right.appendChild(date);
+
+      if (canDeleteEntry(entry)) {
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'btn-gb-delete';
+        delBtn.textContent = '삭제';
+        delBtn.addEventListener('click', () => deleteGuestbookEntry(entry.id));
+        right.appendChild(delBtn);
+      }
+
+      head.appendChild(meta);
+      head.appendChild(right);
+
+      const msg = document.createElement('p');
+      msg.className = 'guestbook-msg';
+      msg.textContent = entry.message;
+
+      li.appendChild(head);
+      li.appendChild(msg);
+      fragment.appendChild(li);
+    });
+
+    el.guestbookList.appendChild(fragment);
+  }
+
+  function renderDetailComments(artId) {
+    if (!el.detailCommentList || !artId) return;
+    const filtered = state.guestbookEntries.filter(entry => entry.artworkId === artId);
+    if (el.detailCommentCount) {
+      el.detailCommentCount.textContent = String(filtered.length);
+    }
+    el.detailCommentList.innerHTML = '';
+
+    if (filtered.length === 0) {
+      const p = document.createElement('li');
+      p.className = 'detail-comment-empty';
+      p.textContent = '이 작품의 첫 번째 한줄 감상평을 남겨 주세요.';
+      el.detailCommentList.appendChild(p);
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    filtered.slice(0, 20).forEach(entry => {
+      const li = document.createElement('li');
+      li.className = 'detail-comment-item';
+
+      const meta = document.createElement('div');
+      meta.className = 'detail-comment-meta';
+
+      const author = document.createElement('strong');
+      author.className = 'detail-comment-author-name';
+      author.textContent = entry.author || '익명의 관람객';
+
+      const right = document.createElement('span');
+      right.textContent = formatRelativeDate(entry.createdAt);
+
+      meta.appendChild(author);
+      meta.appendChild(right);
+
+      if (canDeleteEntry(entry)) {
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'btn-gb-delete';
+        delBtn.textContent = '삭제';
+        delBtn.addEventListener('click', () => deleteGuestbookEntry(entry.id));
+        meta.appendChild(delBtn);
+      }
+
+      const msg = document.createElement('div');
+      msg.className = 'guestbook-msg';
+      msg.textContent = entry.message;
+
+      li.appendChild(meta);
+      li.appendChild(msg);
+      fragment.appendChild(li);
+    });
+
+    el.detailCommentList.appendChild(fragment);
+  }
+
+  async function loadGuestbookEntries() {
+    if (window.location.protocol === 'file:') return;
+    try {
+      const res = await fetch('./api/guestbook', { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data && data.ok && Array.isArray(data.entries)) {
+        state.guestbookEntries = data.entries;
+        renderGuestbookList();
+        if (state.currentDetailId) renderDetailComments(state.currentDetailId);
+      }
+    } catch (_) {}
+  }
+
+  async function submitGuestbookEntry({ author, message, artworkId, statusEl, resetFn }) {
+    const cleanMsg = (message || '').trim();
+    if (cleanMsg.length < 2) {
+      if (statusEl) statusEl.textContent = '2자 이상 작성해 주세요.';
+      return;
+    }
+
+    const artworkTitle = artworkId ? getArtworkTitle(artworkId) : '';
+    const website = el.gbWebsiteTrap ? el.gbWebsiteTrap.value : '';
+
+    if (statusEl) statusEl.textContent = '등록 중...';
+
+    if (window.location.protocol === 'file:') {
+      const localEntry = {
+        id: `local-${Date.now().toString(36)}`,
+        author: (author || '').trim() || '익명의 관람객',
+        message: cleanMsg,
+        artworkId: artworkId || '',
+        artworkTitle,
+        createdAt: new Date().toISOString()
+      };
+      state.guestbookEntries.unshift(localEntry);
+      state.ownCommentIds.add(localEntry.id);
+      saveJsonStorage(GB_OWN_IDS_KEY, Array.from(state.ownCommentIds));
+      renderGuestbookList();
+      if (state.currentDetailId) renderDetailComments(state.currentDetailId);
+      if (resetFn) resetFn();
+      if (statusEl) statusEl.textContent = '감상평이 등록되었습니다.';
+      return;
+    }
+
+    try {
+      const res = await fetch('./api/guestbook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          author,
+          message: cleanMsg,
+          artworkId,
+          artworkTitle,
+          website,
+          clientToken: state.gbClientToken
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data || !data.ok) {
+        if (statusEl) statusEl.textContent = (data && data.error) || '등록에 실패했습니다.';
+        return;
+      }
+
+      const saved = data.entry;
+      if (saved) {
+        state.guestbookEntries.unshift(saved);
+        state.ownCommentIds.add(saved.id);
+        saveJsonStorage(GB_OWN_IDS_KEY, Array.from(state.ownCommentIds));
+      }
+      renderGuestbookList();
+      if (state.currentDetailId) renderDetailComments(state.currentDetailId);
+      if (resetFn) resetFn();
+      if (statusEl) statusEl.textContent = '감사합니다! 방명록에 등록되었습니다.';
+    } catch (_) {
+      if (statusEl) statusEl.textContent = '네트워크 오류로 등록하지 못했습니다.';
+    }
+  }
+
+  async function deleteGuestbookEntry(entryId) {
+    if (!entryId) return;
+    if (window.location.protocol === 'file:') {
+      state.guestbookEntries = state.guestbookEntries.filter(item => item.id !== entryId);
+      renderGuestbookList();
+      if (state.currentDetailId) renderDetailComments(state.currentDetailId);
+      return;
+    }
+
+    try {
+      const res = await fetch('./api/guestbook', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: entryId,
+          adminPassword: state.adminPassword,
+          clientToken: state.gbClientToken
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data || !data.ok) {
+        if (el.gbStatus) el.gbStatus.textContent = (data && data.error) || '삭제하지 못했습니다.';
+        return;
+      }
+      state.guestbookEntries = state.guestbookEntries.filter(item => item.id !== entryId);
+      renderGuestbookList();
+      if (state.currentDetailId) renderDetailComments(state.currentDetailId);
+    } catch (_) {
+      if (el.gbStatus) el.gbStatus.textContent = '삭제 요청 중 오류가 발생했습니다.';
+    }
+  }
+
+  async function toggleAdminMode() {
+    if (state.adminPassword) {
+      state.adminPassword = '';
+      if (el.btnAdminToggle) {
+        el.btnAdminToggle.classList.remove('is-active');
+        el.btnAdminToggle.textContent = '관리';
+      }
+      renderGuestbookList();
+      if (state.currentDetailId) renderDetailComments(state.currentDetailId);
+      return;
+    }
+
+    const input = window.prompt('방명록 관리자 비밀번호를 입력해 주세요:');
+    if (!input) return;
+
+    try {
+      const res = await fetch('./api/guestbook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'verifyAdmin', adminPassword: input })
+      });
+      const data = await res.json();
+      if (!res.ok || !data || !data.authorized) {
+        if (el.gbStatus) el.gbStatus.textContent = (data && data.error) || '관리자 인증에 실패했습니다.';
+        return;
+      }
+      state.adminPassword = input;
+      if (el.btnAdminToggle) {
+        el.btnAdminToggle.classList.add('is-active');
+        el.btnAdminToggle.textContent = '관리 ON';
+      }
+      if (el.gbStatus) el.gbStatus.textContent = '관리자 삭제 모드가 활성화되었습니다.';
+      renderGuestbookList();
+      if (state.currentDetailId) renderDetailComments(state.currentDetailId);
+    } catch (_) {
+      if (el.gbStatus) el.gbStatus.textContent = '관리자 인증 확인 중 오류가 발생했습니다.';
     }
   }
 
@@ -560,14 +1159,41 @@
     }
   }
 
+  function setSortMode(mode) {
+    state.sortMode = mode === 'popular' ? 'popular' : 'alpha';
+    if (el.btnSortAlpha) {
+      const isAlpha = state.sortMode === 'alpha';
+      el.btnSortAlpha.classList.toggle('active', isAlpha);
+      el.btnSortAlpha.setAttribute('aria-pressed', isAlpha ? 'true' : 'false');
+    }
+    if (el.btnSortPopular) {
+      const isPop = state.sortMode === 'popular';
+      el.btnSortPopular.classList.toggle('active', isPop);
+      el.btnSortPopular.setAttribute('aria-pressed', isPop ? 'true' : 'false');
+    }
+    applyFiltersAndRender();
+  }
+
   function applyFiltersAndRender() {
     const query = state.searchQuery.trim().toLowerCase();
 
-    state.filteredArtworks = state.allArtworks.filter(art => {
+    const filtered = state.allArtworks.filter(art => {
       const matchesCategory = state.selectedCategory === '전체' || art.category === state.selectedCategory;
       const matchesSearch = !query || art.title.toLowerCase().includes(query);
       return matchesCategory && matchesSearch;
     });
+
+    if (state.sortMode === 'popular') {
+      filtered.sort((a, b) => {
+        const likeDiff = getLikeCount(b.id) - getLikeCount(a.id);
+        if (likeDiff !== 0) return likeDiff;
+        const viewDiff = getViewCount(b.id) - getViewCount(a.id);
+        if (viewDiff !== 0) return viewDiff;
+        return a.title.localeCompare(b.title, 'ko-KR');
+      });
+    }
+
+    state.filteredArtworks = filtered;
 
     if (el.galleryCountText) {
       el.galleryCountText.textContent = `총 ${state.filteredArtworks.length}점 전시 중`;
@@ -593,7 +1219,7 @@
     hideGalleryStatus();
 
     const fragment = document.createDocumentFragment();
-    state.filteredArtworks.forEach(art => {
+    state.filteredArtworks.forEach((art, idx) => {
       const card = document.createElement('article');
       card.className = 'masonry-card';
 
@@ -604,6 +1230,13 @@
 
       const thumbWrap = document.createElement('div');
       thumbWrap.className = 'masonry-thumb-wrap';
+
+      if (state.sortMode === 'popular' && idx < 3 && getLikeCount(art.id) > 0) {
+        const topBadge = document.createElement('span');
+        topBadge.className = 'masonry-top-badge' + (idx === 0 ? ' is-top1' : '');
+        topBadge.textContent = `TOP ${idx + 1}`;
+        thumbWrap.appendChild(topBadge);
+      }
 
       const img = document.createElement('img');
       applyImageDimensions(img, art);
@@ -715,6 +1348,10 @@
     el.detailCategory.textContent = art.category && art.category !== '작품' ? art.category : '';
     el.detailTitle.textContent = art.title;
     if (el.btnDetailLike) applyLikeButtonState(el.btnDetailLike, art.id);
+    updateDetailMetaEngagement(art.id);
+    renderDetailComments(art.id);
+    if (el.detailCommentStatus) el.detailCommentStatus.textContent = '';
+    trackArtworkView(art.id);
     el.detailDescription.innerHTML = '';
 
     // 모달 열기
@@ -1056,15 +1693,21 @@
       }
     });
 
-    // 검색
+    // 검색 & 정렬 전환
     if (el.searchInput) {
       el.searchInput.addEventListener('input', event => {
         state.searchQuery = event.target.value || '';
         applyFiltersAndRender();
       });
     }
+    if (el.btnSortAlpha) {
+      el.btnSortAlpha.addEventListener('click', () => setSortMode('alpha'));
+    }
+    if (el.btnSortPopular) {
+      el.btnSortPopular.addEventListener('click', () => setSortMode('popular'));
+    }
 
-    // 좋아요 버튼 (히어로 대표작 / 상세 보기)
+    // 좋아요 & 상세 감정 반응 버튼
     if (el.btnHeroLike) {
       el.btnHeroLike.addEventListener('click', () => {
         const heroArt = state.featuredArtworks[state.featuredIndex];
@@ -1075,6 +1718,60 @@
       el.btnDetailLike.addEventListener('click', () => {
         if (state.currentDetailId) toggleArtworkLike(state.currentDetailId);
       });
+    }
+    if (el.btnReactCute) {
+      el.btnReactCute.addEventListener('click', () => {
+        if (state.currentDetailId) toggleArtworkReaction(state.currentDetailId, 'cute');
+      });
+    }
+    if (el.btnReactDetail) {
+      el.btnReactDetail.addEventListener('click', () => {
+        if (state.currentDetailId) toggleArtworkReaction(state.currentDetailId, 'detail');
+      });
+    }
+
+    // 다음 작품 주제 투표
+    if (el.pollOptions) {
+      el.pollOptions.querySelectorAll('.poll-option').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const opt = btn.dataset.pollOption;
+          if (opt) castPollVote(opt);
+        });
+      });
+    }
+
+    // 전시장 방명록 & 작품별 한줄 감상평
+    if (el.guestbookForm) {
+      el.guestbookForm.addEventListener('submit', event => {
+        event.preventDefault();
+        submitGuestbookEntry({
+          author: el.gbAuthorInput ? el.gbAuthorInput.value : '',
+          message: el.gbMessageInput ? el.gbMessageInput.value : '',
+          artworkId: el.gbArtworkSelect ? el.gbArtworkSelect.value : '',
+          statusEl: el.gbStatus,
+          resetFn: () => {
+            if (el.gbMessageInput) el.gbMessageInput.value = '';
+          }
+        });
+      });
+    }
+    if (el.detailCommentForm) {
+      el.detailCommentForm.addEventListener('submit', event => {
+        event.preventDefault();
+        if (!state.currentDetailId) return;
+        submitGuestbookEntry({
+          author: el.detailCommentAuthor ? el.detailCommentAuthor.value : '',
+          message: el.detailCommentInput ? el.detailCommentInput.value : '',
+          artworkId: state.currentDetailId,
+          statusEl: el.detailCommentStatus,
+          resetFn: () => {
+            if (el.detailCommentInput) el.detailCommentInput.value = '';
+          }
+        });
+      });
+    }
+    if (el.btnAdminToggle) {
+      el.btnAdminToggle.addEventListener('click', toggleAdminMode);
     }
 
     // 상세 닫기 / 이전 / 다음
@@ -1171,6 +1868,9 @@
     pauseSlideshow,
     stopSlideshow,
     toggleArtworkLike,
+    setSortMode,
+    toggleArtworkReaction,
+    castPollVote,
     getState: () => ({
       total: state.allArtworks.length,
       featuredCount: state.featuredArtworks.length,
@@ -1178,6 +1878,8 @@
       heroAutoplayActive: state.heroAutoTimerId !== null,
       heroResumePending: state.heroResumeTimerId !== null,
       filtered: state.filteredArtworks.length,
+      sortMode: state.sortMode,
+      visitCount: state.visitCount,
       currentDetailId: state.currentDetailId,
       slideState: state.slideState,
       slideIntervalMs: state.slideIntervalMs,

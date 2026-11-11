@@ -30,7 +30,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
 
   <!-- Main Stylesheet -->
-  <link rel="stylesheet" href="./css/style.css?v=20261111f">
+  <link rel="stylesheet" href="./css/style.css?v=20261111g">
 </head>
 <body>
   <!-- =====================================================================
@@ -76,6 +76,7 @@
         <nav class="main-nav" aria-label="전시회 주요 메뉴">
           <a href="#homeSection" class="nav-link active">홈 <span class="nav-dot" aria-hidden="true"></span></a>
           <a href="#gallerySection" class="nav-link">전시작품</a>
+          <a href="#communitySection" class="nav-link">소통공간</a>
         </nav>
 
         <div class="header-actions">
@@ -189,12 +190,21 @@
         <div class="gallery-title-block">
           <span class="gallery-kicker">EXHIBITION ARCHIVE</span>
           <h2 class="gallery-heading" id="galleryHeading" tabindex="-1">전체 작품</h2>
-          <p class="gallery-count" id="galleryCountText">총 0점 전시 중</p>
+          <div class="gallery-count-row">
+            <p class="gallery-count" id="galleryCountText">총 0점 전시 중</p>
+            <span class="gallery-visitors" id="galleryVisitText" hidden>누적 관람 0회</span>
+          </div>
         </div>
 
         <div class="gallery-controls">
           <!-- 카테고리 필터 (manifest에 다중 카테고리가 있을 때 자동 확장) -->
           <div class="category-filters" id="categoryFilters" role="tablist" aria-label="작품 카테고리 필터"></div>
+
+          <!-- 정렬 전환 (가나다순 / 인기순) -->
+          <div class="sort-toggle-group" role="group" aria-label="작품 정렬 방식">
+            <button type="button" class="btn-sort active" id="btnSortAlpha" data-sort="alpha" aria-pressed="true">가나다순</button>
+            <button type="button" class="btn-sort" id="btnSortPopular" data-sort="popular" aria-pressed="false">인기순 ♥</button>
+          </div>
 
           <!-- 작품명 검색 -->
           <div class="search-box">
@@ -219,7 +229,86 @@
   </main>
 
   <!-- =====================================================================
-       SECTION 3: 전시 소개 & 푸터
+       SECTION 3: 관람객 소통공간 (신작 주제 투표 & 전시장 방명록)
+       ===================================================================== -->
+  <section class="community-section" id="communitySection" aria-labelledby="communityHeading">
+    <div class="community-container">
+      <div class="community-header">
+        <span class="gallery-kicker">VISITOR INTERACTION</span>
+        <h2 class="gallery-heading" id="communityHeading">관람객 소통공간</h2>
+        <p class="community-subtitle">다음 전시 작품 주제를 함께 골라 주시고, 전시장 방명록에 따뜻한 한마디를 남겨 주세요.</p>
+      </div>
+
+      <div class="community-grid">
+        <!-- 왼쪽: 다음 작품 주제 투표 -->
+        <div class="community-card poll-card" id="pollCard">
+          <div class="community-card-head">
+            <h3 class="community-card-title">다음에 보고 싶은 작은 생물은?</h3>
+            <span class="community-meta-pill" id="pollTotalText">총 0표</span>
+          </div>
+          <p class="community-card-desc">원하는 주제를 클릭하면 실시간 투표 결과에 반영됩니다. (선택 변경 가능)</p>
+
+          <div class="poll-options" id="pollOptions" role="group" aria-label="다음 작품 주제 투표">
+            <button type="button" class="poll-option" data-poll-option="beetle" aria-pressed="false">
+              <span class="poll-bar" aria-hidden="true"></span>
+              <span class="poll-label">🪲 희귀 딱정벌레 · 사슴벌레</span>
+              <span class="poll-stat">0표 (0%)</span>
+            </button>
+            <button type="button" class="poll-option" data-poll-option="butterfly" aria-pressed="false">
+              <span class="poll-bar" aria-hidden="true"></span>
+              <span class="poll-label">🦋 화려한 나비 · 나방</span>
+              <span class="poll-stat">0표 (0%)</span>
+            </button>
+            <button type="button" class="poll-option" data-poll-option="reptile" aria-pressed="false">
+              <span class="poll-bar" aria-hidden="true"></span>
+              <span class="poll-label">🦎 도롱뇽 · 작은 파충류</span>
+              <span class="poll-stat">0표 (0%)</span>
+            </button>
+            <button type="button" class="poll-option" data-poll-option="botanical" aria-pressed="false">
+              <span class="poll-bar" aria-hidden="true"></span>
+              <span class="poll-label">🌸 풀숲 꽃과 작은 버섯</span>
+              <span class="poll-stat">0표 (0%)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 오른쪽: 전시장 방명록 -->
+        <div class="community-card guestbook-card" id="guestbookCard">
+          <div class="community-card-head">
+            <h3 class="community-card-title">전시장 방명록 &amp; 한줄 감상평</h3>
+            <div class="guestbook-head-actions">
+              <span class="community-meta-pill" id="gbCountText">0개의 이야기</span>
+              <button type="button" class="btn-admin-toggle" id="btnAdminToggle" title="관리자 삭제 모드">관리</button>
+            </div>
+          </div>
+
+          <form class="guestbook-form" id="guestbookForm" novalidate>
+            <div class="gb-form-row">
+              <label for="gbAuthorInput" class="sr-only">닉네임</label>
+              <input type="text" id="gbAuthorInput" class="gb-input gb-input-author" maxlength="20" placeholder="닉네임 (미입력 시 익명)" autocomplete="off">
+              <label for="gbArtworkSelect" class="sr-only">감상 작품 선택</label>
+              <select id="gbArtworkSelect" class="gb-select">
+                <option value="">전시회 전체 소감</option>
+              </select>
+            </div>
+            <!-- 스팸 방지용 허니팟 (화면 비노출) -->
+            <input type="text" name="website" id="gbWebsiteTrap" class="sr-only" tabindex="-1" autocomplete="off" aria-hidden="true">
+            <div class="gb-form-submit-row">
+              <label for="gbMessageInput" class="sr-only">방명록 내용</label>
+              <input type="text" id="gbMessageInput" class="gb-input gb-input-msg" maxlength="200" placeholder="작품 감상평이나 응원 메시지를 남겨 주세요 (2~200자)" required autocomplete="off">
+              <button type="submit" class="btn-gb-submit" id="btnGbSubmit">남기기</button>
+            </div>
+            <p class="gb-status" id="gbStatus" role="status" aria-live="polite"></p>
+          </form>
+
+          <ul class="guestbook-list" id="guestbookList" aria-live="polite"></ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =====================================================================
+       SECTION 4: 전시 소개 & 푸터
        ===================================================================== -->
   <footer class="about-footer" id="aboutSection">
     <div class="about-inner">
@@ -344,6 +433,7 @@
           <div class="detail-meta-row">
             <span class="detail-index" id="detailIndex">/ 01</span>
             <span class="detail-category" id="detailCategory"></span>
+            <span class="detail-views" id="detailViewCount">조회 0</span>
           </div>
 
           <div class="detail-title-row">
@@ -361,19 +451,48 @@
             </button>
           </div>
 
+          <!-- 작품 감정 반응 리액션 -->
+          <div class="detail-reactions-bar" aria-label="작품 감정 반응">
+            <button type="button" class="btn-reaction" id="btnReactCute" data-reaction="cute" aria-pressed="false">
+              <span aria-hidden="true">🌿</span>
+              <span>귀여워요</span>
+              <span class="reaction-count" id="reactCuteCount">0</span>
+            </button>
+            <button type="button" class="btn-reaction" id="btnReactDetail" data-reaction="detail" aria-pressed="false">
+              <span aria-hidden="true">✨</span>
+              <span>디테일 최고</span>
+              <span class="reaction-count" id="reactDetailCount">0</span>
+            </button>
+          </div>
+
           <!-- 작품 설명 (Markdown 렌더링 결과) -->
           <div class="detail-description" id="detailDescription"></div>
 
           <!-- 관련 유튜브 영상 (유효한 URL이 있을 때만 JS가 동적 생성) -->
           <div id="detailVideoContainer"></div>
+
+          <!-- 작품별 한줄 감상평 -->
+          <section class="detail-comments-section" aria-label="이 작품 한줄 감상평">
+            <div class="detail-comments-head">
+              <h3 class="detail-comments-title">작품 한줄 감상평</h3>
+              <span class="detail-comments-count" id="detailCommentCount">0</span>
+            </div>
+            <form class="detail-comment-form" id="detailCommentForm" novalidate>
+              <input type="text" id="detailCommentAuthor" class="detail-comment-author" maxlength="20" placeholder="닉네임" autocomplete="off">
+              <input type="text" id="detailCommentInput" class="detail-comment-input" maxlength="200" placeholder="이 작품에 짧은 감상을 남겨 보세요..." required autocomplete="off">
+              <button type="submit" class="btn-detail-comment-submit" id="btnDetailCommentSubmit">등록</button>
+            </form>
+            <p class="gb-status" id="detailCommentStatus" role="status" aria-live="polite"></p>
+            <ul class="detail-comment-list" id="detailCommentList"></ul>
+          </section>
         </div>
       </div>
     </div>
   </div>
 
   <!-- 순수 바닐라 JS 모듈 -->
-  <script defer src="./js/data-parser.js?v=20261111f"></script>
-  <script defer src="./js/youtube.js?v=20261111f"></script>
-  <script defer src="./js/app.js?v=20261111f"></script>
+  <script defer src="./js/data-parser.js?v=20261111g"></script>
+  <script defer src="./js/youtube.js?v=20261111g"></script>
+  <script defer src="./js/app.js?v=20261111g"></script>
 </body>
 </html>
