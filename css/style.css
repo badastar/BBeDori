@@ -1015,6 +1015,7 @@ button {
   width: 22px;
   height: 1.5px;
   background-color: var(--text-dark);
+  transition: transform 0.48s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.25s ease;
 }
 
 .close-line:first-child {
@@ -1023,6 +1024,19 @@ button {
 
 .close-line:last-child {
   transform: rotate(-45deg);
+}
+
+/* 마우스를 올리면 X 아이콘이 시계 방향으로 360도 한 바퀴 회전 */
+.btn-detail-close:hover .close-line:first-child,
+.btn-detail-close:focus-visible .close-line:first-child {
+  transform: rotate(405deg);
+  background-color: var(--accent-on-light);
+}
+
+.btn-detail-close:hover .close-line:last-child,
+.btn-detail-close:focus-visible .close-line:last-child {
+  transform: rotate(315deg);
+  background-color: var(--accent-on-light);
 }
 
 /* PC: 좌(66%) 이미지 + 우(34%) 정보/설명/영상 */
@@ -1509,5 +1523,15 @@ button {
   .masonry-card:hover,
   .masonry-card:hover .masonry-thumb-wrap img {
     transform: none;
+  }
+
+  .btn-detail-close:hover .close-line:first-child,
+  .btn-detail-close:focus-visible .close-line:first-child {
+    transform: rotate(45deg);
+  }
+
+  .btn-detail-close:hover .close-line:last-child,
+  .btn-detail-close:focus-visible .close-line:last-child {
+    transform: rotate(-45deg);
   }
 }
