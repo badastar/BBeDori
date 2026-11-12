@@ -1403,7 +1403,7 @@
     }
 
     try {
-      const res = await fetch(`./${descUrl}`);
+      const res = await fetch(`./${descUrl}`, { cache: 'no-cache' });
       if (!res.ok) {
         state.descriptionCache.set(descUrl, null);
         return null;
