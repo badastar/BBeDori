@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>작품 관리자 — 빼도리 온라인 전시회</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+  <link rel="stylesheet" href="./css/admin.css">
+</head>
+<body>
+  <!-- 로그인 화면 -->
+  <main class="admin-auth-wrap" id="adminAuthView">
+    <section class="admin-auth-card" aria-labelledby="authTitle">
+      <p class="admin-kicker">BBEODORI EXHIBITION ADMIN</p>
+      <h1 class="admin-auth-title" id="authTitle">빼도리 작품 관리자</h1>
+      <p class="admin-auth-desc">
+        전시장에 등록된 작품을 추가·수정·삭제하고 전시 순서를 변경할 수 있습니다.<br>
+        방명록 관리와 동일한 관리자 비밀번호를 입력해 주세요.
+      </p>
+      <form id="adminLoginForm" class="admin-auth-form">
+        <label for="adminPasswordInput" class="sr-only">관리자 비밀번호</label>
+        <input
+          type="password"
+          id="adminPasswordInput"
+          class="admin-input"
+          placeholder="관리자 비밀번호 입력"
+          autocomplete="current-password"
+          required
+        >
+        <button type="submit" class="btn-primary btn-block" id="btnLoginSubmit">관리자 로그인</button>
+      </form>
+      <p class="admin-status-msg is-error" id="authErrorMsg" role="alert" hidden></p>
+      <div class="admin-auth-footer">
+        <a href="./index.html" class="link-back">← 전시장으로 돌아가기</a>
+      </div>
+    </section>
+  </main>
+
+  <!-- 관리자 대시보드 -->
+  <div class="admin-shell" id="adminDashboardView" hidden>
+    <header class="admin-header">
+      <div class="admin-header-inner">
+        <div class="admin-brand">
+          <span class="admin-kicker">BBEODORI ADMIN</span>
+          <h1 class="admin-title">작품 관리</h1>
+        </div>
+        <div class="admin-header-actions">
+          <a href="./index.html" target="_blank" rel="noopener noreferrer" class="btn-ghost">전시장 보기 ↗</a>
+          <button type="button" class="btn-ghost" id="btnLogout">로그아웃</button>
+          <button type="button" class="btn-primary" id="btnOpenCreateModal">작품 추가 +</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="admin-main">
+      <!-- 환경 설정 안내 배너 (Blob 미연결 시) -->
+      <div class="admin-alert" id="blobWarningBanner" hidden>
+        <strong>이미지 저장소(Vercel Blob) 연결이 필요합니다.</strong>
+        <span>새 작품 이미지를 업로드하려면 Vercel 프로젝트의 <code>Storage → Create → Blob</code>을 연결한 뒤 재배포해 주세요. (기존 71점의 순서·제목·설명·유튜브 수정은 지금도 가능합니다.)</span>
+      </div>
+
+      <!-- 상단 툴바 -->
+      <section class="admin-toolbar" aria-label="작품 검색 및 순서 저장">
+        <div class="toolbar-left">
+          <span class="total-badge" id="adminTotalCount">총 0점</span>
+          <div class="search-wrap">
+            <label for="adminSearchInput" class="sr-only">작품명 검색</label>
+            <input type="search" id="adminSearchInput" class="admin-input admin-search" placeholder="작품명 검색..." autocomplete="off">
+          </div>
+        </div>
+        <div class="toolbar-right">
+          <span class="toolbar-hint" id="orderDirtyHint" hidden>변경된 순서가 있습니다</span>
+          <button type="button" class="btn-secondary" id="btnSaveOrders" disabled>순서 일괄 저장</button>
+        </div>
+      </section>
+
+      <p class="admin-toast" id="adminToast" role="status" aria-live="polite" hidden></p>
+
+      <!-- 작품 목록 테이블 -->
+      <section class="admin-table-card" aria-label="등록된 작품 목록">
+        <div class="table-scroll">
+          <table class="artwork-table">
+            <thead>
+              <tr>
+                <th style="width: 96px;">작품순서</th>
+                <th style="width: 78px;">작품</th>
+                <th>작품명</th>
+                <th>유튜브주소</th>
+                <th style="width: 148px;">관리</th>
+              </tr>
+            </thead>
+            <tbody id="adminArtworkTbody">
+              <tr>
+                <td colspan="5" class="table-empty">작품 목록을 불러오는 중입니다...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- 작품 추가 / 수정 모달 -->
+  <div class="modal-backdrop" id="artworkModalBackdrop" hidden>
+    <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-header">
+        <h2 class="modal-title" id="modalTitle">작품 추가</h2>
+        <button type="button" class="btn-modal-close" id="btnCloseModal" aria-label="닫기">✕</button>
+      </div>
+
+      <form id="artworkForm" class="modal-form" novalidate>
+        <input type="hidden" id="fieldArtworkId">
+
+        <div class="form-grid">
+          <div class="form-col-media">
+            <label class="form-label" for="fieldImageFile">작품첨부 <span class="req">*</span></label>
+            <div class="upload-box" id="uploadPreviewBox">
+              <img id="fieldImagePreview" alt="작품 미리보기" hidden>
+              <div class="upload-placeholder" id="uploadPlaceholder">
+                <span>이미지를 선택해 주세요</span>
+                <small>PNG, JPG, WebP (4MB 초과 시 자동 최적화)</small>
+              </div>
+            </div>
+            <input type="file" id="fieldImageFile" accept="image/png,image/jpeg,image/webp,image/gif" class="file-input">
+            <label for="fieldImageFile" class="btn-secondary btn-file-trigger">이미지 파일 선택</label>
+            <p class="field-help" id="uploadInfoText">기존 작품 수정 시 이미지를 바꾸지 않으면 현재 이미지가 유지됩니다.</p>
+          </div>
+
+          <div class="form-col-fields">
+            <div class="form-row-2">
+              <div class="field-group">
+                <label class="form-label" for="fieldTitle">작품명 <span class="req">*</span></label>
+                <input type="text" id="fieldTitle" class="admin-input" maxlength="80" placeholder="예: 나비도리" required>
+              </div>
+              <div class="field-group">
+                <label class="form-label" for="fieldOrder">작품순서 <span class="req">*</span></label>
+                <input type="number" id="fieldOrder" class="admin-input" step="1" min="-9999" max="99999" required>
+              </div>
+            </div>
+
+            <div class="field-group">
+              <label class="form-label" for="fieldYoutube">유튜브주소</label>
+              <input type="url" id="fieldYoutube" class="admin-input" maxlength="300" placeholder="https://www.youtube.com/@빼도리네">
+            </div>
+
+            <div class="field-group">
+              <div class="label-with-action">
+                <label class="form-label" for="fieldDescription">작품설명 (Markdown 지원)</label>
+                <button type="button" class="btn-text-mini" id="btnFillDefaultDesc">기본 문구 채우기</button>
+              </div>
+              <textarea id="fieldDescription" class="admin-textarea" rows="8" placeholder="작품에 담긴 이야기와 제작 과정을 자유롭게 작성해 주세요."></textarea>
+            </div>
+
+            <label class="checkbox-row">
+              <input type="checkbox" id="fieldFeatured">
+              <span>메인 화면 대표작 슬라이드에 포함하기</span>
+            </label>
+          </div>
+        </div>
+
+        <p class="admin-status-msg is-error" id="modalErrorMsg" role="alert" hidden></p>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-ghost" id="btnCancelModal">취소</button>
+          <button type="submit" class="btn-primary" id="btnSaveArtwork">저장하기</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="./js/admin.js"></script>
+</body>
+</html>

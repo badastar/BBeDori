@@ -324,7 +324,7 @@
   }
 
   /**
-   * manifest.json 항목 검증, 작품명/경로 생성, 이름 가나다 순 정렬
+   * manifest.json / API 항목 검증, 작품명/경로 생성, 작품순서(order) -> 가나다 순 정렬
    * @param {Array} rawItems
    * @returns {Array}
    */
@@ -335,14 +335,15 @@
     for (let i = 0; i < rawItems.length; i++) {
       const item = rawItems[i];
       if (!item || typeof item !== 'object') continue;
-      if (!item.id || !item.filename) continue;
+      const hasImage = Boolean((item.imageUrl && String(item.imageUrl).trim()) || (item.filename && String(item.filename).trim()));
+      if (!item.id || !hasImage) continue;
 
-      const filename = String(item.filename).trim();
-      if (!filename) continue;
-
-      const title = item.titleOverride && String(item.titleOverride).trim()
-        ? String(item.titleOverride).trim()
-        : deriveTitleFromFilename(filename);
+      const filename = item.filename ? String(item.filename).trim() : `${String(item.title || item.id).trim()}.png`;
+      const title = item.title && String(item.title).trim()
+        ? String(item.title).trim()
+        : item.titleOverride && String(item.titleOverride).trim()
+          ? String(item.titleOverride).trim()
+          : deriveTitleFromFilename(filename);
 
       const descFilename = item.description && String(item.description).trim()
         ? String(item.description).trim()
@@ -354,6 +355,9 @@
         : null;
       const width = Number.isFinite(Number(item.width)) && Number(item.width) > 0 ? Number(item.width) : null;
       const height = Number.isFinite(Number(item.height)) && Number(item.height) > 0 ? Number(item.height) : null;
+      const imageUrl = item.imageUrl && String(item.imageUrl).trim()
+        ? String(item.imageUrl).trim()
+        : buildArtworkPath(filename);
 
       valid.push({
         id: String(item.id).trim(),
@@ -361,22 +365,24 @@
         title,
         category: item.category ? String(item.category).trim() : '작품',
         description: descFilename,
+        descriptionText: typeof item.descriptionText === 'string' ? item.descriptionText : null,
+        youtubeUrl: typeof item.youtubeUrl === 'string' ? item.youtubeUrl.trim() : '',
         order: numericOrder,
         featured: Boolean(item.featured),
         featuredOrder,
         width,
         height,
-        imageUrl: buildArtworkPath(filename),
+        imageUrl,
         descriptionUrl: buildDescriptionPath(descFilename),
         _index: i
       });
     }
 
-    // 전시회 정렬 기준: 이름 가나다 순 (한국어 로케일 정렬, 동일 제목 시 order -> 입력 순)
+    // 전시회 기본 정렬 기준: 작품순서(order) 오름차순 -> 이름 가나다 순
     valid.sort((a, b) => {
+      if (a.order !== b.order) return a.order - b.order;
       const titleCmp = a.title.localeCompare(b.title, 'ko-KR', { numeric: true, sensitivity: 'base' });
       if (titleCmp !== 0) return titleCmp;
-      if (a.order !== b.order) return a.order - b.order;
       return a._index - b._index;
     });
 

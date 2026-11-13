@@ -1,0 +1,9 @@
+{
+  "name": "bbedori-exhibition",
+  "version": "1.0.0",
+  "private": true,
+  "description": "빼도리 온라인 전시회 (Vercel + Upstash Redis + Vercel Blob)",
+  "dependencies": {
+    "@vercel/blob": "^2.8.2"
+  }
+}

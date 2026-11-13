@@ -78,7 +78,7 @@
     filteredArtworks: [],
     activeListForDetail: [],
     selectedCategory: '전체',
-    sortMode: 'alpha', // 'alpha' | 'popular'
+    sortMode: 'order', // 'order' | 'popular' | 'alpha'
     searchQuery: '',
     currentDetailId: null,
     detailRequestToken: 0,
@@ -125,6 +125,7 @@
     gallerySection: document.getElementById('gallerySection'),
     galleryHeading: document.getElementById('galleryHeading'),
     categoryFilters: document.getElementById('categoryFilters'),
+    btnSortOrder: document.getElementById('btnSortOrder'),
     btnSortAlpha: document.getElementById('btnSortAlpha'),
     btnSortPopular: document.getElementById('btnSortPopular'),
     searchInput: document.getElementById('artworkSearchInput'),
@@ -186,14 +187,37 @@
     handleInitialDeepLink();
   }
 
+  function resolveAssetUrl(url) {
+    if (!url || typeof url !== 'string') return '';
+    const trimmed = url.trim();
+    if (/^(?:https?:)?\/\//i.test(trimmed) || /^data:/i.test(trimmed)) {
+      return trimmed;
+    }
+    return `./${trimmed.replace(/^\.\//, '')}`;
+  }
+
   async function loadArtworks() {
     showGalleryStatus('전시 작품을 불러오는 중입니다...');
     try {
-      const response = await fetch('./data/manifest.json', { cache: 'no-cache' });
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+      let rawData = null;
+      if (window.location.protocol !== 'file:') {
+        try {
+          const apiRes = await fetch('./api/artworks', { cache: 'no-store' });
+          if (apiRes.ok) {
+            const apiJson = await apiRes.json();
+            if (apiJson && apiJson.ok && Array.isArray(apiJson.artworks)) {
+              rawData = apiJson.artworks;
+            }
+          }
+        } catch (_) {}
       }
-      const rawData = await response.json();
+      if (!rawData) {
+        const response = await fetch('./data/manifest.json', { cache: 'no-cache' });
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        rawData = await response.json();
+      }
       state.allArtworks = Data.normalizeManifest(rawData);
     } catch (error) {
       console.error('[BbaedoriApp] manifest.json 로드 실패:', error);
@@ -1015,12 +1039,14 @@
         if (el.heroArtworkFallback) el.heroArtworkFallback.hidden = false;
       };
       applyImageDimensions(el.heroFeaturedImg, art);
-      el.heroFeaturedImg.src = `./${art.imageUrl}`;
+      el.heroFeaturedImg.src = resolveAssetUrl(art.imageUrl);
       el.heroFeaturedImg.alt = art.title;
     }
 
     const reqToken = ++state.heroRequestToken;
-    const rawMd = await fetchDescriptionMarkdown(art.descriptionUrl);
+    const rawMd = typeof art.descriptionText === 'string'
+      ? art.descriptionText
+      : await fetchDescriptionMarkdown(art.descriptionUrl);
     if (reqToken !== state.heroRequestToken || state.featuredIndex !== safeIndex) return;
     if (el.heroFeaturedDesc) {
       el.heroFeaturedDesc.textContent = extractHeroExcerpt(rawMd) || '작품을 클릭하면 상세 설명과 이야기를 감상하실 수 있습니다.';
@@ -1031,7 +1057,7 @@
       const nextArt = list[(safeIndex + 1) % list.length];
       if (nextArt && nextArt.imageUrl) {
         const preload = new Image();
-        preload.src = `./${nextArt.imageUrl}`;
+        preload.src = resolveAssetUrl(nextArt.imageUrl);
       }
     }
   }
@@ -1160,7 +1186,12 @@
   }
 
   function setSortMode(mode) {
-    state.sortMode = mode === 'popular' ? 'popular' : 'alpha';
+    state.sortMode = (mode === 'popular' || mode === 'alpha') ? mode : 'order';
+    if (el.btnSortOrder) {
+      const isOrder = state.sortMode === 'order';
+      el.btnSortOrder.classList.toggle('active', isOrder);
+      el.btnSortOrder.setAttribute('aria-pressed', isOrder ? 'true' : 'false');
+    }
     if (el.btnSortAlpha) {
       const isAlpha = state.sortMode === 'alpha';
       el.btnSortAlpha.classList.toggle('active', isAlpha);
@@ -1190,6 +1221,18 @@
         const viewDiff = getViewCount(b.id) - getViewCount(a.id);
         if (viewDiff !== 0) return viewDiff;
         return a.title.localeCompare(b.title, 'ko-KR');
+      });
+    } else if (state.sortMode === 'alpha') {
+      filtered.sort((a, b) => {
+        const titleCmp = a.title.localeCompare(b.title, 'ko-KR', { numeric: true, sensitivity: 'base' });
+        if (titleCmp !== 0) return titleCmp;
+        return (Number(a.order) || 0) - (Number(b.order) || 0);
+      });
+    } else {
+      filtered.sort((a, b) => {
+        const orderDiff = (Number(a.order) || 0) - (Number(b.order) || 0);
+        if (orderDiff !== 0) return orderDiff;
+        return a.title.localeCompare(b.title, 'ko-KR', { numeric: true, sensitivity: 'base' });
       });
     }
 
@@ -1240,7 +1283,7 @@
 
       const img = document.createElement('img');
       applyImageDimensions(img, art);
-      img.src = `./${art.imageUrl}`;
+      img.src = resolveAssetUrl(art.imageUrl);
       img.alt = art.title;
       img.loading = 'lazy';
       img.decoding = 'async';
@@ -1342,7 +1385,7 @@
 
     // 기본 정보 즉시 반영
     applyImageDimensions(el.detailImage, art);
-    el.detailImage.src = `./${art.imageUrl}`;
+    el.detailImage.src = resolveAssetUrl(art.imageUrl);
     el.detailImage.alt = art.title;
     el.detailIndex.textContent = `/ ${String(artIndex + 1).padStart(2, '0')} · ${list.length}`;
     el.detailCategory.textContent = art.category && art.category !== '작품' ? art.category : '';
@@ -1365,26 +1408,41 @@
 
     // 작품별 Markdown 비동기 로드 (빠른 연속 이동 시 경합 방지)
     const requestToken = ++state.detailRequestToken;
-    const rawMd = await fetchDescriptionMarkdown(art.descriptionUrl);
+    const rawMd = typeof art.descriptionText === 'string'
+      ? art.descriptionText
+      : await fetchDescriptionMarkdown(art.descriptionUrl);
     if (requestToken !== state.detailRequestToken || state.currentDetailId !== art.id) {
       return;
     }
 
-    if (rawMd) {
-      const parsed = Data.parseArtworkMarkdown(rawMd);
-      if (parsed.bodyHtml) {
-        el.detailDescription.innerHTML = parsed.bodyHtml;
-      } else {
-        renderNoDescriptionFallback();
-      }
-
-      // 유효한 유튜브 URL이 있을 때만 관련 영상 DOM 생성 (없으면 null -> 빈 여백 없음)
-      const videoSection = YouTube.createVideoSectionElement(parsed.youtubeRaw, art.title);
-      if (videoSection) {
-        el.detailVideoContainer.appendChild(videoSection);
-      }
+    const parsed = rawMd ? Data.parseArtworkMarkdown(rawMd) : null;
+    if (parsed && parsed.bodyHtml) {
+      el.detailDescription.innerHTML = parsed.bodyHtml;
     } else {
       renderNoDescriptionFallback();
+    }
+
+    const effectiveYoutube = (art.youtubeUrl && art.youtubeUrl.trim()) || (parsed && parsed.youtubeRaw) || '';
+    if (effectiveYoutube) {
+      // 유효한 개별 영상 URL이면 임베드 생성, 채널 URL 등은 하단 링크로 표시
+      const videoSection = YouTube.createVideoSectionElement(effectiveYoutube, art.title);
+      if (videoSection) {
+        el.detailVideoContainer.appendChild(videoSection);
+      } else if (/^https?:\/\/(?:www\.|m\.)?(?:youtube\.com|youtu\.be)\//i.test(effectiveYoutube)) {
+        const alreadyInText = typeof rawMd === 'string' && rawMd.includes(effectiveYoutube);
+        if (!alreadyInText) {
+          const p = document.createElement('p');
+          p.className = 'detail-youtube-channel';
+          p.appendChild(document.createTextNode('빼도리네 유튜브 채널 : '));
+          const a = document.createElement('a');
+          a.href = effectiveYoutube;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          a.textContent = effectiveYoutube;
+          p.appendChild(a);
+          el.detailDescription.appendChild(p);
+        }
+      }
     }
   }
 
@@ -1699,6 +1757,9 @@
         state.searchQuery = event.target.value || '';
         applyFiltersAndRender();
       });
+    }
+    if (el.btnSortOrder) {
+      el.btnSortOrder.addEventListener('click', () => setSortMode('order'));
     }
     if (el.btnSortAlpha) {
       el.btnSortAlpha.addEventListener('click', () => setSortMode('alpha'));
