@@ -45,7 +45,6 @@
     authErrorMsg: document.getElementById('authErrorMsg'),
     btnLogout: document.getElementById('btnLogout'),
     btnOpenCreateModal: document.getElementById('btnOpenCreateModal'),
-    blobWarningBanner: document.getElementById('blobWarningBanner'),
     adminTotalCount: document.getElementById('adminTotalCount'),
     adminSearchInput: document.getElementById('adminSearchInput'),
     orderDirtyHint: document.getElementById('orderDirtyHint'),
@@ -209,9 +208,6 @@
     state.artworks = Array.isArray(artData.artworks) ? artData.artworks : [];
     state.blobConfigured = Boolean(artData.blobConfigured);
     state.dirtyOrders.clear();
-    if (el.blobWarningBanner) {
-      el.blobWarningBanner.hidden = state.blobConfigured;
-    }
 
     if (engRes.ok) {
       const engData = await engRes.json();
