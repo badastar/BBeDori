@@ -33,16 +33,20 @@ function getBlobToken() {
   return '';
 }
 
+function isBlobConfigured() {
+  return Boolean(getBlobToken() || process.env.BLOB_STORE_ID || process.env.VERCEL_OIDC_TOKEN);
+}
+
 function isVercelBlobUrl(url) {
   return typeof url === 'string' && /^https:\/\/[^/]*blob\.vercel-storage\.com\//i.test(url.trim());
 }
 
 async function deleteBlobSafely(url) {
   const token = getBlobToken();
-  if (!isVercelBlobUrl(url) || !token) return;
+  if (!isVercelBlobUrl(url) || !isBlobConfigured()) return;
   try {
     const { del } = await import('@vercel/blob');
-    await del(url, { token });
+    await del(url, token ? { token } : undefined);
   } catch (err) {
     console.warn('[api/artworks] Blob 삭제 실패 (무시 가능):', err && err.message ? err.message : err);
   }
@@ -248,7 +252,7 @@ module.exports = async function handler(req, res) {
   }
 
   const creds = getRedisCredentials();
-  const blobConfigured = Boolean(getBlobToken());
+  const blobConfigured = isBlobConfigured();
   const adminEnabled = Boolean(getAdminPassword());
 
   if (req.method === 'GET') {

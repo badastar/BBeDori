@@ -26,6 +26,10 @@ function getBlobToken() {
   return '';
 }
 
+function isBlobConfigured() {
+  return Boolean(getBlobToken() || process.env.BLOB_STORE_ID || process.env.VERCEL_OIDC_TOKEN);
+}
+
 async function readBinaryBody(req, maxBytes) {
   if (Buffer.isBuffer(req.body)) {
     return req.body;
@@ -82,10 +86,10 @@ module.exports = async function handler(req, res) {
   }
 
   const blobToken = getBlobToken();
-  if (!blobToken) {
+  if (!isBlobConfigured()) {
     sendJson(res, 503, {
       ok: false,
-      error: 'Vercel Blob(BLOB_READ_WRITE_TOKEN)이 아직 연결되지 않았습니다. Vercel Blob 스토어 화면에서 Connect to Project → bbedori 연결 후 재배포해 주세요.'
+      error: 'Vercel Blob이 아직 연결되지 않았습니다. Vercel Blob 스토어 화면에서 Connect to Project → bbedori 연결 후 재배포해 주세요.'
     });
     return;
   }
@@ -126,12 +130,15 @@ module.exports = async function handler(req, res) {
 
   try {
     const { put } = await import('@vercel/blob');
-    const blob = await put(blobPath, buffer, {
+    const putOptions = {
       access: 'public',
       addRandomSuffix: true,
-      contentType: rawContentType,
-      token: blobToken
-    });
+      contentType: rawContentType
+    };
+    if (blobToken) {
+      putOptions.token = blobToken;
+    }
+    const blob = await put(blobPath, buffer, putOptions);
     sendJson(res, 200, {
       ok: true,
       url: blob.url,
