@@ -2307,3 +2307,26 @@ button {
     transform: rotate(-45deg);
   }
 }
+
+/* 실시간 투표 기간 배지 및 마감 상태 */
+.poll-period-badge {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 0 8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: rgba(200, 66, 18, 0.08);
+  color: var(--accent-on-light, #a3340d);
+}
+
+.poll-period-badge.is-closed {
+  background: rgba(80, 80, 80, 0.1);
+  color: #555555;
+}
+
+.poll-option:disabled {
+  cursor: default;
+  opacity: 0.86;
+}

@@ -244,10 +244,11 @@
         <!-- 왼쪽: 다음 작품 주제 투표 -->
         <div class="community-card poll-card" id="pollCard">
           <div class="community-card-head">
-            <h3 class="community-card-title">다음에 보고 싶은 작은 생물은?</h3>
+            <h3 class="community-card-title" id="pollTitle">다음에 보고 싶은 작은 생물은?</h3>
             <span class="community-meta-pill" id="pollTotalText">총 0표</span>
           </div>
-          <p class="community-card-desc">원하는 주제를 클릭하면 실시간 투표 결과에 반영됩니다. (선택 변경 가능)</p>
+          <p class="poll-period-badge" id="pollPeriodBadge" hidden></p>
+          <p class="community-card-desc" id="pollDescText">원하는 주제를 클릭하면 실시간 투표 결과에 반영됩니다. (선택 변경 가능)</p>
 
           <div class="poll-options" id="pollOptions" role="group" aria-label="다음 작품 주제 투표">
             <button type="button" class="poll-option" data-poll-option="beetle" aria-pressed="false">
@@ -279,7 +280,6 @@
             <h3 class="community-card-title">전시장 방명록 &amp; 한줄 감상평</h3>
             <div class="guestbook-head-actions">
               <span class="community-meta-pill" id="gbCountText">0개의 이야기</span>
-              <button type="button" class="btn-admin-toggle" id="btnAdminToggle" title="관리자 삭제 모드">관리</button>
             </div>
           </div>
 
@@ -453,7 +453,7 @@
           </div>
 
           <!-- 작품 감정 반응 리액션 -->
-          <div class="detail-reactions-bar" aria-label="작품 감정 반응">
+          <div class="detail-reactions-bar" id="detailReactionsBar" aria-label="작품 감정 반응">
             <button type="button" class="btn-reaction" id="btnReactCute" data-reaction="cute" aria-pressed="false">
               <span aria-hidden="true">🌿</span>
               <span>귀여워요</span>

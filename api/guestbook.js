@@ -14,6 +14,7 @@ const {
   parseJsonBody,
   sendJson
 } = require('./_redis');
+const { verifyAdminRequest } = require('./_auth');
 
 const GUESTBOOK_KEY = 'bbedori:guestbook';
 const MAX_ENTRIES = 200;
@@ -228,8 +229,7 @@ module.exports = async function handler(req, res) {
         return;
       }
 
-      const envPass = process.env.ADMIN_DELETE_PASSWORD || '';
-      const isAdmin = Boolean(envPass && adminPassword && timingSafeMatch(adminPassword, envPass));
+      const isAdmin = verifyAdminRequest(req, body).ok;
       const isAuthor = Boolean(
         targetParsed.tokenHash &&
         clientToken &&

@@ -16,13 +16,24 @@
 
   const state = {
     token: loadToken(),
+    activeTab: 'artworks',
     artworks: [],
     dirtyOrders: new Map(),
     searchQuery: '',
     editingId: null,
     pendingFile: null,
     pendingDims: { width: null, height: null },
-    blobConfigured: true
+    blobConfigured: true,
+
+    likes: {},
+    views: {},
+    reactions: {},
+    pollCounts: {},
+    reactionConfig: [],
+    pollConfig: { pollId: 'default', question: '', startDate: '', endDate: '', options: [] },
+
+    guestbookEntries: [],
+    gbSearchQuery: ''
   };
 
   const el = {
@@ -41,6 +52,32 @@
     btnSaveOrders: document.getElementById('btnSaveOrders'),
     adminToast: document.getElementById('adminToast'),
     tbody: document.getElementById('adminArtworkTbody'),
+
+    tabButtons: document.querySelectorAll('.admin-tab'),
+    tabPanels: {
+      artworks: document.getElementById('tabPanelArtworks'),
+      reactions: document.getElementById('tabPanelReactions'),
+      guestbook: document.getElementById('tabPanelGuestbook'),
+      poll: document.getElementById('tabPanelPoll')
+    },
+
+    reactionConfigList: document.getElementById('reactionConfigList'),
+    btnAddReactionRow: document.getElementById('btnAddReactionRow'),
+    btnSaveReactions: document.getElementById('btnSaveReactions'),
+
+    adminGbCount: document.getElementById('adminGbCount'),
+    adminGbSearch: document.getElementById('adminGbSearch'),
+    btnRefreshGuestbook: document.getElementById('btnRefreshGuestbook'),
+    adminGuestbookTbody: document.getElementById('adminGuestbookTbody'),
+
+    adminPollTotalBadge: document.getElementById('adminPollTotalBadge'),
+    pollQuestionInput: document.getElementById('pollQuestionInput'),
+    pollStartDateInput: document.getElementById('pollStartDateInput'),
+    pollEndDateInput: document.getElementById('pollEndDateInput'),
+    pollOptionsConfigList: document.getElementById('pollOptionsConfigList'),
+    btnAddPollOption: document.getElementById('btnAddPollOption'),
+    btnSavePollKeepVotes: document.getElementById('btnSavePollKeepVotes'),
+    btnStartFreshPoll: document.getElementById('btnStartFreshPoll'),
 
     modalBackdrop: document.getElementById('artworkModalBackdrop'),
     modalTitle: document.getElementById('modalTitle'),
@@ -118,9 +155,31 @@
     if (el.dashboardView) el.dashboardView.hidden = !authenticated;
   }
 
-  async function apiPostArtworks(payload) {
-    const res = await fetch('./api/artworks', {
-      method: 'POST',
+  function switchTab(tabName) {
+    state.activeTab = tabName;
+    el.tabButtons.forEach(btn => {
+      const active = btn.dataset.tab === tabName;
+      btn.classList.toggle('is-active', active);
+      btn.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    Object.entries(el.tabPanels).forEach(([key, panel]) => {
+      if (panel) panel.hidden = key !== tabName;
+    });
+  }
+
+  function handleUnauthorized(status) {
+    if (status === 401) {
+      saveToken('');
+      switchView(false);
+      setAuthError('세션이 만료되었습니다. 다시 로그인해 주세요.');
+      return true;
+    }
+    return false;
+  }
+
+  async function apiPostJson(endpoint, payload, method = 'POST') {
+    const res = await fetch(endpoint, {
+      method,
       headers: {
         'Content-Type': 'application/json',
         ...(state.token ? { 'x-admin-token': state.token } : {})
@@ -128,31 +187,56 @@
       body: JSON.stringify(payload)
     });
     const data = await res.json().catch(() => ({}));
-    if (res.status === 401) {
-      saveToken('');
-      switchView(false);
-      setAuthError('세션이 만료되었습니다. 다시 로그인해 주세요.');
-    }
+    handleUnauthorized(res.status);
     if (!res.ok || !data.ok) {
       throw new Error(data.error || `요청 실패 (HTTP ${res.status})`);
     }
     return data;
   }
 
-  async function loadArtworks() {
-    const res = await fetch('./api/artworks', { cache: 'no-store' });
-    const data = await res.json();
-    if (!res.ok || !data.ok) {
-      throw new Error(data.error || '작품 목록을 불러오지 못했습니다.');
+  async function loadAllDashboardData() {
+    const [artRes, engRes, gbRes] = await Promise.all([
+      fetch('./api/artworks', { cache: 'no-store' }),
+      fetch('./api/engagement', { cache: 'no-store' }),
+      fetch('./api/guestbook', { cache: 'no-store' })
+    ]);
+
+    const artData = await artRes.json();
+    if (!artRes.ok || !artData.ok) {
+      throw new Error(artData.error || '작품 목록을 불러오지 못했습니다.');
     }
-    state.artworks = Array.isArray(data.artworks) ? data.artworks : [];
-    state.blobConfigured = Boolean(data.blobConfigured);
+
+    state.artworks = Array.isArray(artData.artworks) ? artData.artworks : [];
+    state.blobConfigured = Boolean(artData.blobConfigured);
     state.dirtyOrders.clear();
     if (el.blobWarningBanner) {
       el.blobWarningBanner.hidden = state.blobConfigured;
     }
+
+    if (engRes.ok) {
+      const engData = await engRes.json();
+      if (engData && engData.ok) {
+        state.likes = engData.likes || {};
+        state.views = engData.views || {};
+        state.reactions = engData.reactions || {};
+        state.pollCounts = engData.poll || {};
+        state.reactionConfig = Array.isArray(engData.reactionConfig) ? engData.reactionConfig : [];
+        state.pollConfig = engData.pollConfig || state.pollConfig;
+      }
+    }
+
+    if (gbRes.ok) {
+      const gbData = await gbRes.json();
+      if (gbData && gbData.ok && Array.isArray(gbData.entries)) {
+        state.guestbookEntries = gbData.entries;
+      }
+    }
+
     updateDirtyOrderUI();
-    renderTable();
+    renderArtworkTable();
+    renderReactionConfigEditor();
+    renderGuestbookTable();
+    renderPollEditor();
   }
 
   function updateDirtyOrderUI() {
@@ -164,7 +248,7 @@
     }
   }
 
-  function renderTable() {
+  function renderArtworkTable() {
     if (!el.tbody) return;
     const query = state.searchQuery.trim().toLowerCase();
     const list = state.artworks.filter(item => {
@@ -180,7 +264,7 @@
     if (list.length === 0) {
       const tr = document.createElement('tr');
       const td = document.createElement('td');
-      td.colSpan = 5;
+      td.colSpan = 6;
       td.className = 'table-empty';
       td.textContent = query ? '검색 조건에 맞는 작품이 없습니다.' : '등록된 작품이 없습니다.';
       tr.appendChild(td);
@@ -239,7 +323,34 @@
       }
       tdTitle.appendChild(titleCell);
 
-      // 4. 유튜브주소
+      // 4. 좋아요 · 반응
+      const tdEng = document.createElement('td');
+      const engWrap = document.createElement('div');
+      engWrap.className = 'engagement-cell';
+
+      const likeCount = Number(state.likes[art.id]) || 0;
+      const likeChip = document.createElement('span');
+      likeChip.className = 'stat-chip is-like';
+      likeChip.textContent = `♥ ${likeCount.toLocaleString('ko-KR')}`;
+      engWrap.appendChild(likeChip);
+
+      const viewCount = Number(state.views[art.id]) || 0;
+      const viewChip = document.createElement('span');
+      viewChip.className = 'stat-chip';
+      viewChip.textContent = `조회 ${viewCount.toLocaleString('ko-KR')}`;
+      engWrap.appendChild(viewChip);
+
+      state.reactionConfig.forEach(rc => {
+        const rCount = Number(state.reactions[`${art.id}:${rc.key}`]) || 0;
+        const rChip = document.createElement('span');
+        rChip.className = 'stat-chip';
+        rChip.title = rc.label;
+        rChip.textContent = `${rc.emoji || '✨'} ${rc.label} ${rCount.toLocaleString('ko-KR')}`;
+        engWrap.appendChild(rChip);
+      });
+      tdEng.appendChild(engWrap);
+
+      // 5. 유튜브주소
       const tdYt = document.createElement('td');
       if (art.youtubeUrl) {
         const a = document.createElement('a');
@@ -253,7 +364,7 @@
         tdYt.textContent = '-';
       }
 
-      // 5. 수정 | 삭제
+      // 6. 수정 | 삭제
       const tdActions = document.createElement('td');
       const actions = document.createElement('div');
       actions.className = 'row-actions';
@@ -277,6 +388,7 @@
       tr.appendChild(tdOrder);
       tr.appendChild(tdImg);
       tr.appendChild(tdTitle);
+      tr.appendChild(tdEng);
       tr.appendChild(tdYt);
       tr.appendChild(tdActions);
       fragment.appendChild(tr);
@@ -285,6 +397,292 @@
     el.tbody.appendChild(fragment);
   }
 
+  /* ========================================================================
+     TAB 2: 감정 반응(리액션) 설정
+     ======================================================================== */
+  function renderReactionConfigEditor() {
+    if (!el.reactionConfigList) return;
+    el.reactionConfigList.innerHTML = '';
+    state.reactionConfig.forEach((item, index) => {
+      const row = document.createElement('div');
+      row.className = 'config-row';
+
+      const emojiInput = document.createElement('input');
+      emojiInput.type = 'text';
+      emojiInput.className = 'admin-input emoji-input';
+      emojiInput.maxLength = 8;
+      emojiInput.value = item.emoji || '✨';
+      emojiInput.placeholder = '✨';
+      emojiInput.addEventListener('input', () => {
+        item.emoji = emojiInput.value;
+      });
+
+      const labelInput = document.createElement('input');
+      labelInput.type = 'text';
+      labelInput.className = 'admin-input';
+      labelInput.maxLength = 20;
+      labelInput.value = item.label || '';
+      labelInput.placeholder = '반응 문구 (예: 귀여워요)';
+      labelInput.addEventListener('input', () => {
+        item.label = labelInput.value;
+      });
+
+      const keyPill = document.createElement('span');
+      keyPill.className = 'vote-count-pill';
+      keyPill.textContent = `키: ${item.key}`;
+
+      const btnDel = document.createElement('button');
+      btnDel.type = 'button';
+      btnDel.className = 'btn-danger-sm';
+      btnDel.textContent = '삭제';
+      btnDel.disabled = state.reactionConfig.length <= 1;
+      btnDel.addEventListener('click', () => {
+        if (state.reactionConfig.length <= 1) return;
+        state.reactionConfig.splice(index, 1);
+        renderReactionConfigEditor();
+      });
+
+      row.appendChild(emojiInput);
+      row.appendChild(labelInput);
+      row.appendChild(keyPill);
+      row.appendChild(btnDel);
+      el.reactionConfigList.appendChild(row);
+    });
+  }
+
+  async function handleSaveReactions() {
+    const cleaned = state.reactionConfig
+      .map(r => ({ key: r.key, emoji: (r.emoji || '✨').trim(), label: (r.label || '').trim() }))
+      .filter(r => r.label);
+    if (cleaned.length === 0) {
+      showToast('최소 1개 이상의 감정 반응 문구를 입력해 주세요.', true);
+      return;
+    }
+
+    el.btnSaveReactions.disabled = true;
+    try {
+      const data = await apiPostJson('./api/engagement', {
+        action: 'saveReactionsConfig',
+        reactionConfig: cleaned
+      });
+      state.reactionConfig = data.reactionConfig || cleaned;
+      renderReactionConfigEditor();
+      renderArtworkTable();
+      showToast('감정 반응 버튼 설정이 저장되었습니다.');
+    } catch (err) {
+      showToast(err.message || '감정 반응 저장에 실패했습니다.', true);
+    } finally {
+      el.btnSaveReactions.disabled = false;
+    }
+  }
+
+  /* ========================================================================
+     TAB 3: 방명록 관리
+     ======================================================================== */
+  async function refreshGuestbook() {
+    const res = await fetch('./api/guestbook', { cache: 'no-store' });
+    const data = await res.json();
+    if (res.ok && data.ok && Array.isArray(data.entries)) {
+      state.guestbookEntries = data.entries;
+      renderGuestbookTable();
+    }
+  }
+
+  function renderGuestbookTable() {
+    if (!el.adminGuestbookTbody) return;
+    const query = state.gbSearchQuery.trim().toLowerCase();
+    const list = state.guestbookEntries.filter(entry => {
+      if (!query) return true;
+      return (
+        String(entry.author || '').toLowerCase().includes(query) ||
+        String(entry.message || '').toLowerCase().includes(query) ||
+        String(entry.artworkTitle || '').toLowerCase().includes(query)
+      );
+    });
+
+    if (el.adminGbCount) {
+      el.adminGbCount.textContent = `총 ${state.guestbookEntries.length}건`;
+    }
+
+    el.adminGuestbookTbody.innerHTML = '';
+    if (list.length === 0) {
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = 5;
+      td.className = 'table-empty';
+      td.textContent = query ? '검색 조건에 맞는 방명록이 없습니다.' : '등록된 방명록이 없습니다.';
+      tr.appendChild(td);
+      el.adminGuestbookTbody.appendChild(tr);
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    list.forEach(entry => {
+      const tr = document.createElement('tr');
+
+      const tdAuthor = document.createElement('td');
+      tdAuthor.textContent = entry.author || '익명';
+
+      const tdTarget = document.createElement('td');
+      tdTarget.textContent = entry.artworkTitle ? `🎨 ${entry.artworkTitle}` : '전시회 전체 소감';
+
+      const tdMsg = document.createElement('td');
+      tdMsg.className = 'gb-msg-cell';
+      tdMsg.textContent = entry.message || '';
+
+      const tdDate = document.createElement('td');
+      const dt = entry.createdAt ? new Date(entry.createdAt) : null;
+      tdDate.textContent = dt && !Number.isNaN(dt.getTime())
+        ? `${dt.getFullYear()}.${String(dt.getMonth() + 1).padStart(2, '0')}.${String(dt.getDate()).padStart(2, '0')}`
+        : '-';
+
+      const tdAct = document.createElement('td');
+      const btnDel = document.createElement('button');
+      btnDel.type = 'button';
+      btnDel.className = 'btn-danger-sm';
+      btnDel.textContent = '삭제';
+      btnDel.addEventListener('click', () => handleDeleteGuestbook(entry));
+      tdAct.appendChild(btnDel);
+
+      tr.appendChild(tdAuthor);
+      tr.appendChild(tdTarget);
+      tr.appendChild(tdMsg);
+      tr.appendChild(tdDate);
+      tr.appendChild(tdAct);
+      fragment.appendChild(tr);
+    });
+    el.adminGuestbookTbody.appendChild(fragment);
+  }
+
+  async function handleDeleteGuestbook(entry) {
+    const ok = window.confirm(`'${entry.author || '익명'}'님의 방명록 글을 삭제할까요?`);
+    if (!ok) return;
+    try {
+      await apiPostJson('./api/guestbook', { id: entry.id }, 'DELETE');
+      state.guestbookEntries = state.guestbookEntries.filter(item => item.id !== entry.id);
+      renderGuestbookTable();
+      showToast('방명록 글이 삭제되었습니다.');
+    } catch (err) {
+      showToast(err.message || '방명록 삭제에 실패했습니다.', true);
+    }
+  }
+
+  /* ========================================================================
+     TAB 4: 실시간 투표 관리
+     ======================================================================== */
+  function renderPollEditor() {
+    const cfg = state.pollConfig || { question: '', startDate: '', endDate: '', options: [] };
+    if (el.pollQuestionInput) el.pollQuestionInput.value = cfg.question || '';
+    if (el.pollStartDateInput) el.pollStartDateInput.value = cfg.startDate || '';
+    if (el.pollEndDateInput) el.pollEndDateInput.value = cfg.endDate || '';
+
+    const options = Array.isArray(cfg.options) ? cfg.options : [];
+    const totalVotes = options.reduce((sum, opt) => sum + (Number(state.pollCounts[opt.key]) || 0), 0);
+    if (el.adminPollTotalBadge) {
+      el.adminPollTotalBadge.textContent = `현재 총 ${totalVotes.toLocaleString('ko-KR')}표`;
+    }
+
+    if (!el.pollOptionsConfigList) return;
+    el.pollOptionsConfigList.innerHTML = '';
+    options.forEach((opt, index) => {
+      const row = document.createElement('div');
+      row.className = 'config-row';
+
+      const emojiInput = document.createElement('input');
+      emojiInput.type = 'text';
+      emojiInput.className = 'admin-input emoji-input';
+      emojiInput.maxLength = 8;
+      emojiInput.value = opt.emoji || '🌿';
+      emojiInput.addEventListener('input', () => {
+        opt.emoji = emojiInput.value;
+      });
+
+      const labelInput = document.createElement('input');
+      labelInput.type = 'text';
+      labelInput.className = 'admin-input';
+      labelInput.maxLength = 50;
+      labelInput.value = opt.label || '';
+      labelInput.placeholder = '투표 선택지 문구';
+      labelInput.addEventListener('input', () => {
+        opt.label = labelInput.value;
+      });
+
+      const countPill = document.createElement('span');
+      countPill.className = 'vote-count-pill';
+      countPill.textContent = `${(Number(state.pollCounts[opt.key]) || 0).toLocaleString('ko-KR')}표`;
+
+      const btnDel = document.createElement('button');
+      btnDel.type = 'button';
+      btnDel.className = 'btn-danger-sm';
+      btnDel.textContent = '삭제';
+      btnDel.disabled = options.length <= 2;
+      btnDel.addEventListener('click', () => {
+        if (options.length <= 2) return;
+        options.splice(index, 1);
+        renderPollEditor();
+      });
+
+      row.appendChild(emojiInput);
+      row.appendChild(labelInput);
+      row.appendChild(countPill);
+      row.appendChild(btnDel);
+      el.pollOptionsConfigList.appendChild(row);
+    });
+  }
+
+  async function handleSavePoll(resetVotes) {
+    const question = el.pollQuestionInput.value.trim();
+    const startDate = el.pollStartDateInput.value;
+    const endDate = el.pollEndDateInput.value;
+    const options = (state.pollConfig.options || [])
+      .map(o => ({ key: o.key, emoji: (o.emoji || '🌿').trim(), label: (o.label || '').trim() }))
+      .filter(o => o.label);
+
+    if (!question) {
+      showToast('투표 질문을 입력해 주세요.', true);
+      return;
+    }
+    if (options.length < 2) {
+      showToast('투표 선택지는 최소 2개 이상 필요합니다.', true);
+      return;
+    }
+    if (startDate && endDate && startDate > endDate) {
+      showToast('종료일은 시작일보다 빠를 수 없습니다.', true);
+      return;
+    }
+    if (resetVotes) {
+      const confirmed = window.confirm('현재까지 집계된 투표 표를 모두 0으로 초기화하고 새 회차 투표를 시작할까요?');
+      if (!confirmed) return;
+    }
+
+    el.btnSavePollKeepVotes.disabled = true;
+    el.btnStartFreshPoll.disabled = true;
+    try {
+      const data = await apiPostJson('./api/engagement', {
+        action: 'savePollConfig',
+        resetVotes: Boolean(resetVotes),
+        pollConfig: {
+          question,
+          startDate,
+          endDate,
+          options
+        }
+      });
+      state.pollConfig = data.pollConfig;
+      state.pollCounts = data.poll || {};
+      renderPollEditor();
+      showToast(resetVotes ? '새 투표가 시작되었습니다. (기존 득표 초기화)' : '투표 설정이 저장되었습니다.');
+    } catch (err) {
+      showToast(err.message || '투표 설정 저장에 실패했습니다.', true);
+    } finally {
+      el.btnSavePollKeepVotes.disabled = false;
+      el.btnStartFreshPoll.disabled = false;
+    }
+  }
+
+  /* ========================================================================
+     작품 추가 / 수정 모달 & 이미지 업로드
+     ======================================================================== */
   function resetModalPreview(imageUrl = '') {
     state.pendingFile = null;
     state.pendingDims = { width: null, height: null };
@@ -390,6 +788,7 @@
       body: prepared.blob
     });
     const data = await res.json().catch(() => ({}));
+    handleUnauthorized(res.status);
     if (!res.ok || !data.ok || !data.url) {
       throw new Error(data.error || `이미지 업로드 실패 (HTTP ${res.status})`);
     }
@@ -438,7 +837,7 @@
       }
 
       el.btnSaveArtwork.textContent = '작품 저장 중...';
-      const data = await apiPostArtworks({
+      const data = await apiPostJson('./api/artworks', {
         action: existing ? 'update' : 'create',
         ...(existing ? { id: existing.id } : {}),
         title,
@@ -454,7 +853,7 @@
       state.artworks = Array.isArray(data.artworks) ? data.artworks : state.artworks;
       state.dirtyOrders.clear();
       updateDirtyOrderUI();
-      renderTable();
+      renderArtworkTable();
       closeModal();
       showToast(existing ? `'${title}' 작품이 수정되었습니다.` : `'${title}' 작품이 추가되었습니다.`);
     } catch (err) {
@@ -472,11 +871,11 @@
 
     try {
       const orders = Array.from(state.dirtyOrders.entries()).map(([id, order]) => ({ id, order }));
-      const data = await apiPostArtworks({ action: 'reorder', orders });
+      const data = await apiPostJson('./api/artworks', { action: 'reorder', orders });
       state.artworks = Array.isArray(data.artworks) ? data.artworks : state.artworks;
       state.dirtyOrders.clear();
       updateDirtyOrderUI();
-      renderTable();
+      renderArtworkTable();
       showToast('작품 순서가 저장되었습니다.');
     } catch (err) {
       showToast(err.message || '순서 저장에 실패했습니다.', true);
@@ -491,11 +890,11 @@
     if (!ok) return;
 
     try {
-      const data = await apiPostArtworks({ action: 'delete', id: art.id });
+      const data = await apiPostJson('./api/artworks', { action: 'delete', id: art.id });
       state.artworks = Array.isArray(data.artworks) ? data.artworks : state.artworks;
       state.dirtyOrders.delete(art.id);
       updateDirtyOrderUI();
-      renderTable();
+      renderArtworkTable();
       showToast(`'${art.title}' 작품이 삭제되었습니다.`);
     } catch (err) {
       showToast(err.message || '삭제에 실패했습니다.', true);
@@ -515,11 +914,11 @@
     el.btnLoginSubmit.textContent = '확인 중...';
 
     try {
-      const data = await apiPostArtworks({ action: 'verifyAdmin', adminPassword: password });
+      const data = await apiPostJson('./api/artworks', { action: 'verifyAdmin', adminPassword: password });
       saveToken(data.token);
       el.passwordInput.value = '';
       switchView(true);
-      await loadArtworks();
+      await loadAllDashboardData();
     } catch (err) {
       setAuthError(err.message || '로그인에 실패했습니다.');
     } finally {
@@ -539,15 +938,15 @@
         setAuthError('');
       });
     }
-    if (el.btnOpenCreateModal) {
-      el.btnOpenCreateModal.addEventListener('click', openCreateModal);
-    }
-    if (el.btnCloseModal) {
-      el.btnCloseModal.addEventListener('click', closeModal);
-    }
-    if (el.btnCancelModal) {
-      el.btnCancelModal.addEventListener('click', closeModal);
-    }
+    el.tabButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (btn.dataset.tab) switchTab(btn.dataset.tab);
+      });
+    });
+
+    if (el.btnOpenCreateModal) el.btnOpenCreateModal.addEventListener('click', openCreateModal);
+    if (el.btnCloseModal) el.btnCloseModal.addEventListener('click', closeModal);
+    if (el.btnCancelModal) el.btnCancelModal.addEventListener('click', closeModal);
     if (el.modalBackdrop) {
       el.modalBackdrop.addEventListener('click', e => {
         if (e.target === el.modalBackdrop) closeModal();
@@ -556,12 +955,10 @@
     if (el.adminSearchInput) {
       el.adminSearchInput.addEventListener('input', e => {
         state.searchQuery = e.target.value || '';
-        renderTable();
+        renderArtworkTable();
       });
     }
-    if (el.btnSaveOrders) {
-      el.btnSaveOrders.addEventListener('click', handleSaveOrders);
-    }
+    if (el.btnSaveOrders) el.btnSaveOrders.addEventListener('click', handleSaveOrders);
     if (el.btnFillDefaultDesc) {
       el.btnFillDefaultDesc.addEventListener('click', () => {
         if (!el.fieldDescription.value.trim() || window.confirm('현재 작성 중인 설명을 기본 문구로 덮어쓸까요?')) {
@@ -588,9 +985,49 @@
           : `선택됨: ${file.name} (${sizeMb} MB)`;
       });
     }
-    if (el.artworkForm) {
-      el.artworkForm.addEventListener('submit', handleFormSubmit);
+    if (el.artworkForm) el.artworkForm.addEventListener('submit', handleFormSubmit);
+
+    if (el.btnAddReactionRow) {
+      el.btnAddReactionRow.addEventListener('click', () => {
+        if (state.reactionConfig.length >= 8) {
+          showToast('감정 반응 버튼은 최대 8개까지 설정할 수 있습니다.', true);
+          return;
+        }
+        state.reactionConfig.push({
+          key: `r_${Date.now().toString(36)}`,
+          emoji: '💛',
+          label: ''
+        });
+        renderReactionConfigEditor();
+      });
     }
+    if (el.btnSaveReactions) el.btnSaveReactions.addEventListener('click', handleSaveReactions);
+
+    if (el.adminGbSearch) {
+      el.adminGbSearch.addEventListener('input', e => {
+        state.gbSearchQuery = e.target.value || '';
+        renderGuestbookTable();
+      });
+    }
+    if (el.btnRefreshGuestbook) el.btnRefreshGuestbook.addEventListener('click', refreshGuestbook);
+
+    if (el.btnAddPollOption) {
+      el.btnAddPollOption.addEventListener('click', () => {
+        if (!state.pollConfig.options) state.pollConfig.options = [];
+        if (state.pollConfig.options.length >= 8) {
+          showToast('투표 선택지는 최대 8개까지 추가할 수 있습니다.', true);
+          return;
+        }
+        state.pollConfig.options.push({
+          key: `opt_${Date.now().toString(36)}`,
+          emoji: '🌿',
+          label: ''
+        });
+        renderPollEditor();
+      });
+    }
+    if (el.btnSavePollKeepVotes) el.btnSavePollKeepVotes.addEventListener('click', () => handleSavePoll(false));
+    if (el.btnStartFreshPoll) el.btnStartFreshPoll.addEventListener('click', () => handleSavePoll(true));
   }
 
   async function init() {
@@ -598,9 +1035,9 @@
     if (state.token) {
       switchView(true);
       try {
-        await loadArtworks();
+        await loadAllDashboardData();
       } catch (err) {
-        showToast(err.message || '목록을 불러오지 못했습니다.', true);
+        showToast(err.message || '관리자 데이터를 불러오지 못했습니다.', true);
       }
     } else {
       switchView(false);

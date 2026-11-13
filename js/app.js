@@ -22,7 +22,22 @@
   const GB_CLIENT_TOKEN_KEY = 'bbaedori_gb_client_token_v1';
   const GB_OWN_IDS_KEY = 'bbaedori_gb_own_ids_v1';
   const VISIT_SESSION_KEY = 'bbaedori_visit_counted_v1';
-  const POLL_OPTION_KEYS = ['beetle', 'butterfly', 'reptile', 'botanical'];
+  const DEFAULT_REACTION_CONFIG = [
+    { key: 'cute', emoji: '🌿', label: '귀여워요' },
+    { key: 'detail', emoji: '✨', label: '디테일 최고' }
+  ];
+  const DEFAULT_POLL_CONFIG = {
+    pollId: 'default',
+    question: '다음에 보고 싶은 작은 생물은?',
+    startDate: '',
+    endDate: '',
+    options: [
+      { key: 'beetle', emoji: '🪲', label: '희귀 딱정벌레 · 사슴벌레' },
+      { key: 'butterfly', emoji: '🦋', label: '화려한 나비 · 나방' },
+      { key: 'reptile', emoji: '🦎', label: '도롱뇽 · 작은 파충류' },
+      { key: 'botanical', emoji: '🌸', label: '풀숲 꽃과 작은 버섯' }
+    ]
+  };
 
   function loadStoredIds(key = LIKES_STORAGE_KEY) {
     try {
@@ -94,9 +109,11 @@
     viewedSessionIds: new Set(),
     reactionChoices: loadStoredObject(REACTIONS_STORAGE_KEY),
     reactionCounts: {},
+    reactionConfig: DEFAULT_REACTION_CONFIG,
     pendingReactions: new Set(),
     pollVote: loadStoredString(POLL_STORAGE_KEY),
     pollCounts: {},
+    pollConfig: DEFAULT_POLL_CONFIG,
     pendingPollVote: false,
     guestbookEntries: [],
     ownCommentIds: loadStoredIds(GB_OWN_IDS_KEY),
@@ -135,6 +152,9 @@
     masonryGrid: document.getElementById('masonryGrid'),
     btnScrollTop: document.getElementById('btnScrollTop'),
 
+    pollTitle: document.getElementById('pollTitle'),
+    pollPeriodBadge: document.getElementById('pollPeriodBadge'),
+    pollDescText: document.getElementById('pollDescText'),
     pollOptions: document.getElementById('pollOptions'),
     pollTotalText: document.getElementById('pollTotalText'),
     guestbookForm: document.getElementById('guestbookForm'),
@@ -157,6 +177,7 @@
     detailViewCount: document.getElementById('detailViewCount'),
     detailTitle: document.getElementById('detailTitle'),
     btnDetailLike: document.getElementById('btnDetailLike'),
+    detailReactionsBar: document.getElementById('detailReactionsBar'),
     btnReactCute: document.getElementById('btnReactCute'),
     btnReactDetail: document.getElementById('btnReactDetail'),
     reactCuteCount: document.getElementById('reactCuteCount'),
@@ -339,24 +360,43 @@
     if (el.detailViewCount) {
       el.detailViewCount.textContent = `조회 ${getViewCount(artId).toLocaleString('ko-KR')}`;
     }
-    const cuteKey = `${artId}:cute`;
-    const detailKey = `${artId}:detail`;
-    const cuteActive = Boolean(state.reactionChoices[cuteKey]);
-    const detailActive = Boolean(state.reactionChoices[detailKey]);
-    if (el.btnReactCute) {
-      el.btnReactCute.classList.toggle('is-active', cuteActive);
-      el.btnReactCute.setAttribute('aria-pressed', cuteActive ? 'true' : 'false');
-    }
-    if (el.btnReactDetail) {
-      el.btnReactDetail.classList.toggle('is-active', detailActive);
-      el.btnReactDetail.setAttribute('aria-pressed', detailActive ? 'true' : 'false');
-    }
-    if (el.reactCuteCount) {
-      el.reactCuteCount.textContent = (Number(state.reactionCounts[cuteKey]) || 0).toLocaleString('ko-KR');
-    }
-    if (el.reactDetailCount) {
-      el.reactDetailCount.textContent = (Number(state.reactionCounts[detailKey]) || 0).toLocaleString('ko-KR');
-    }
+    if (!el.detailReactionsBar) return;
+    const list = Array.isArray(state.reactionConfig) && state.reactionConfig.length > 0
+      ? state.reactionConfig
+      : DEFAULT_REACTION_CONFIG;
+
+    el.detailReactionsBar.innerHTML = '';
+    const fragment = document.createDocumentFragment();
+    list.forEach(item => {
+      const key = `${artId}:${item.key}`;
+      const active = Boolean(state.reactionChoices[key]);
+      const count = Number(state.reactionCounts[key]) || 0;
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn-reaction';
+      if (active) btn.classList.add('is-active');
+      btn.dataset.reaction = item.key;
+      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+
+      const emojiSpan = document.createElement('span');
+      emojiSpan.setAttribute('aria-hidden', 'true');
+      emojiSpan.textContent = item.emoji || '✨';
+
+      const labelSpan = document.createElement('span');
+      labelSpan.textContent = item.label || '';
+
+      const countSpan = document.createElement('span');
+      countSpan.className = 'reaction-count';
+      countSpan.textContent = count.toLocaleString('ko-KR');
+
+      btn.appendChild(emojiSpan);
+      btn.appendChild(labelSpan);
+      btn.appendChild(countSpan);
+      btn.addEventListener('click', () => toggleArtworkReaction(artId, item.key));
+      fragment.appendChild(btn);
+    });
+    el.detailReactionsBar.appendChild(fragment);
   }
 
   async function recordVisitIfNeeded() {
@@ -444,6 +484,15 @@
         state.visitCount = Number(data.visits) || 0;
         state.reactionCounts = data.reactions && typeof data.reactions === 'object' ? { ...data.reactions } : {};
         state.pollCounts = data.poll && typeof data.poll === 'object' ? { ...data.poll } : {};
+        if (Array.isArray(data.reactionConfig) && data.reactionConfig.length > 0) {
+          state.reactionConfig = data.reactionConfig;
+        }
+        if (data.pollConfig && typeof data.pollConfig === 'object' && Array.isArray(data.pollConfig.options)) {
+          state.pollConfig = data.pollConfig;
+          const pollId = state.pollConfig.pollId || 'default';
+          const storageKey = pollId === 'default' ? POLL_STORAGE_KEY : `${POLL_STORAGE_KEY}:${pollId}`;
+          state.pollVote = loadStoredString(storageKey);
+        }
 
         syncAllLikesUI();
         updateVisitorBadge();
@@ -565,40 +614,103 @@
     }
   }
 
+  function getPollPeriodStatus(pollCfg) {
+    const start = pollCfg && pollCfg.startDate ? pollCfg.startDate : '';
+    const end = pollCfg && pollCfg.endDate ? pollCfg.endDate : '';
+    const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    const today = kst.toISOString().slice(0, 10);
+    if (start && today < start) return { open: false, text: `투표 예정 · ${start}${end ? ` ~ ${end}` : '부터'}` };
+    if (end && today > end) return { open: false, text: `투표 마감 · ${start ? `${start} ~ ` : ''}${end}` };
+    if (start || end) {
+      return { open: true, text: `진행 기간 · ${start || '지금'} ~ ${end || '상시'}` };
+    }
+    return { open: true, text: '' };
+  }
+
   function renderPollUI() {
     if (!el.pollOptions) return;
-    const total = POLL_OPTION_KEYS.reduce((sum, key) => sum + (Number(state.pollCounts[key]) || 0), 0);
+    const cfg = state.pollConfig || DEFAULT_POLL_CONFIG;
+    const options = Array.isArray(cfg.options) && cfg.options.length > 0 ? cfg.options : DEFAULT_POLL_CONFIG.options;
+    const period = getPollPeriodStatus(cfg);
+
+    if (el.pollTitle) {
+      el.pollTitle.textContent = cfg.question || DEFAULT_POLL_CONFIG.question;
+    }
+    if (el.pollPeriodBadge) {
+      if (period.text) {
+        el.pollPeriodBadge.textContent = period.text;
+        el.pollPeriodBadge.classList.toggle('is-closed', !period.open);
+        el.pollPeriodBadge.hidden = false;
+      } else {
+        el.pollPeriodBadge.hidden = true;
+      }
+    }
+    if (el.pollDescText) {
+      el.pollDescText.textContent = period.open
+        ? '원하는 주제를 클릭하면 실시간 투표 결과에 반영됩니다. (선택 변경 가능)'
+        : '투표 기간이 종료되었거나 시작 전입니다. 현재 집계 결과를 확인해 보세요.';
+    }
+
+    const total = options.reduce((sum, opt) => sum + (Number(state.pollCounts[opt.key]) || 0), 0);
     if (el.pollTotalText) {
       el.pollTotalText.textContent = `총 ${total.toLocaleString('ko-KR')}표`;
     }
 
-    el.pollOptions.querySelectorAll('.poll-option').forEach(btn => {
-      const opt = btn.dataset.pollOption;
-      const count = Number(state.pollCounts[opt]) || 0;
+    el.pollOptions.innerHTML = '';
+    const fragment = document.createDocumentFragment();
+    options.forEach(opt => {
+      const count = Number(state.pollCounts[opt.key]) || 0;
       const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-      const isVoted = state.pollVote === opt;
-      btn.classList.toggle('is-voted', isVoted);
+      const isVoted = state.pollVote === opt.key;
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'poll-option';
+      if (isVoted) btn.classList.add('is-voted');
+      if (!period.open) btn.disabled = true;
+      btn.dataset.pollOption = opt.key;
       btn.setAttribute('aria-pressed', isVoted ? 'true' : 'false');
 
-      const bar = btn.querySelector('.poll-bar');
-      const stat = btn.querySelector('.poll-stat');
-      if (bar) bar.style.width = `${pct}%`;
-      if (stat) stat.textContent = `${count.toLocaleString('ko-KR')}표 (${pct}%)`;
+      const bar = document.createElement('span');
+      bar.className = 'poll-bar';
+      bar.setAttribute('aria-hidden', 'true');
+      bar.style.width = `${pct}%`;
+
+      const label = document.createElement('span');
+      label.className = 'poll-label';
+      label.textContent = `${opt.emoji || '🌿'} ${opt.label || ''}`.trim();
+
+      const stat = document.createElement('span');
+      stat.className = 'poll-stat';
+      stat.textContent = `${count.toLocaleString('ko-KR')}표 (${pct}%)`;
+
+      btn.appendChild(bar);
+      btn.appendChild(label);
+      btn.appendChild(stat);
+      btn.addEventListener('click', () => castPollVote(opt.key));
+      fragment.appendChild(btn);
     });
+    el.pollOptions.appendChild(fragment);
   }
 
   async function castPollVote(option) {
-    if (!option || !POLL_OPTION_KEYS.includes(option) || state.pendingPollVote) return;
+    const cfg = state.pollConfig || DEFAULT_POLL_CONFIG;
+    const options = Array.isArray(cfg.options) ? cfg.options : [];
+    const validKeys = options.map(o => o.key);
+    const period = getPollPeriodStatus(cfg);
+    if (!period.open || !option || !validKeys.includes(option) || state.pendingPollVote) return;
     if (state.pollVote === option) return;
 
     const prevOption = state.pollVote;
     state.pollVote = option;
     state.pollCounts[option] = (Number(state.pollCounts[option]) || 0) + 1;
-    if (prevOption && POLL_OPTION_KEYS.includes(prevOption)) {
+    if (prevOption && validKeys.includes(prevOption)) {
       state.pollCounts[prevOption] = Math.max(0, (Number(state.pollCounts[prevOption]) || 0) - 1);
     }
     try {
-      window.localStorage.setItem(POLL_STORAGE_KEY, option);
+      const pollId = cfg.pollId || 'default';
+      const storageKey = pollId === 'default' ? POLL_STORAGE_KEY : `${POLL_STORAGE_KEY}:${pollId}`;
+      window.localStorage.setItem(storageKey, option);
     } catch (_) {}
     renderPollUI();
 
@@ -1778,26 +1890,6 @@
     if (el.btnDetailLike) {
       el.btnDetailLike.addEventListener('click', () => {
         if (state.currentDetailId) toggleArtworkLike(state.currentDetailId);
-      });
-    }
-    if (el.btnReactCute) {
-      el.btnReactCute.addEventListener('click', () => {
-        if (state.currentDetailId) toggleArtworkReaction(state.currentDetailId, 'cute');
-      });
-    }
-    if (el.btnReactDetail) {
-      el.btnReactDetail.addEventListener('click', () => {
-        if (state.currentDetailId) toggleArtworkReaction(state.currentDetailId, 'detail');
-      });
-    }
-
-    // 다음 작품 주제 투표
-    if (el.pollOptions) {
-      el.pollOptions.querySelectorAll('.poll-option').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const opt = btn.dataset.pollOption;
-          if (opt) castPollVote(opt);
-        });
       });
     }
 
