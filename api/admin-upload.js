@@ -16,6 +16,16 @@ const ALLOWED_MIME_EXT = {
 
 const MAX_UPLOAD_BYTES = 4.3 * 1024 * 1024; // Vercel 4.5MB 페이로드 제한 여유분
 
+function getBlobToken() {
+  if (process.env.BLOB_READ_WRITE_TOKEN) return process.env.BLOB_READ_WRITE_TOKEN;
+  for (const key of Object.keys(process.env)) {
+    if (/_BLOB_READ_WRITE_TOKEN$/.test(key) && process.env[key]) {
+      return process.env[key];
+    }
+  }
+  return '';
+}
+
 async function readBinaryBody(req, maxBytes) {
   if (Buffer.isBuffer(req.body)) {
     return req.body;
@@ -71,10 +81,11 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+  const blobToken = getBlobToken();
+  if (!blobToken) {
     sendJson(res, 503, {
       ok: false,
-      error: 'Vercel Blob(BLOB_READ_WRITE_TOKEN)이 아직 연결되지 않았습니다. Vercel 프로젝트 Storage에서 Blob 스토어를 생성·연결한 뒤 재배포해 주세요.'
+      error: 'Vercel Blob(BLOB_READ_WRITE_TOKEN)이 아직 연결되지 않았습니다. Vercel Blob 스토어 화면에서 Connect to Project → bbedori 연결 후 재배포해 주세요.'
     });
     return;
   }
@@ -118,7 +129,8 @@ module.exports = async function handler(req, res) {
     const blob = await put(blobPath, buffer, {
       access: 'public',
       addRandomSuffix: true,
-      contentType: rawContentType
+      contentType: rawContentType,
+      token: blobToken
     });
     sendJson(res, 200, {
       ok: true,

@@ -23,15 +23,26 @@ const {
 const ARTWORKS_KEY = 'bbedori:artworks';
 const DEFAULT_YOUTUBE_URL = 'https://www.youtube.com/@빼도리네';
 
+function getBlobToken() {
+  if (process.env.BLOB_READ_WRITE_TOKEN) return process.env.BLOB_READ_WRITE_TOKEN;
+  for (const key of Object.keys(process.env)) {
+    if (/_BLOB_READ_WRITE_TOKEN$/.test(key) && process.env[key]) {
+      return process.env[key];
+    }
+  }
+  return '';
+}
+
 function isVercelBlobUrl(url) {
   return typeof url === 'string' && /^https:\/\/[^/]*blob\.vercel-storage\.com\//i.test(url.trim());
 }
 
 async function deleteBlobSafely(url) {
-  if (!isVercelBlobUrl(url) || !process.env.BLOB_READ_WRITE_TOKEN) return;
+  const token = getBlobToken();
+  if (!isVercelBlobUrl(url) || !token) return;
   try {
     const { del } = await import('@vercel/blob');
-    await del(url);
+    await del(url, { token });
   } catch (err) {
     console.warn('[api/artworks] Blob 삭제 실패 (무시 가능):', err && err.message ? err.message : err);
   }
@@ -237,7 +248,7 @@ module.exports = async function handler(req, res) {
   }
 
   const creds = getRedisCredentials();
-  const blobConfigured = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+  const blobConfigured = Boolean(getBlobToken());
   const adminEnabled = Boolean(getAdminPassword());
 
   if (req.method === 'GET') {
